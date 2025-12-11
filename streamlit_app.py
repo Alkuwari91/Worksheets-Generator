@@ -281,150 +281,117 @@ def text_to_pdf(title: str, content: str) -> bytes:
 CUSTOM_CSS = """
 <style>
 
-/* Hide Streamlit default header */
 header, footer {visibility: hidden;}
 
-/* Global app styles */
 body, .stApp {
-    background: #f4f5f7;
+    background-color: #f6f7fb;
     font-family: "Cairo", sans-serif;
-    color: #1f2937;
 }
 
-/* HEADER */
-.app-header {
+/* =============================
+   PROFESSIONAL TOP NAVBAR
+   ============================= */
+.navbar {
+    position: sticky;
+    top: 0;
+    z-index: 999;
     width: 100%;
-    padding: 1.6rem 2rem;
-    background: linear-gradient(135deg, #8A1538, #5e0d24);
-    border-radius: 0 0 20px 20px;
-    color: #ffffff;
-    margin-bottom: 1.5rem;
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.20);
+    background: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 0.8rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 
-.header-title {
-    font-size: 2.2rem;
+/* LEFT SIDE — BRAND */
+.nav-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.nav-logo {
+    font-size: 1.35rem;
     font-weight: 800;
-    letter-spacing: .3px;
+    color: #8A1538;
 }
 
-.header-sub {
-    font-size: 1rem;
-    opacity: .95;
+/* CENTER MENU */
+.nav-menu {
+    display: flex;
+    gap: 1.5rem;
 }
 
-/* TABS */
-.stTabs {
-    margin-top: .5rem;
-    margin-bottom: 1.2rem;
+.nav-item {
+    font-size: 0.95rem;
+    color: #374151;
+    text-decoration: none;
+    font-weight: 600;
 }
 
-.stTabs [data-baseweb="tab-list"] {
-    gap: .6rem;
+.nav-item:hover {
+    color: #8A1538;
 }
 
-.stTabs [data-baseweb="tab"] {
-    background: #e8eaf0;
-    color: #4b5563;
+/* RIGHT SIDE — BUTTONS */
+.nav-right {
+    display: flex;
+    gap: 0.7rem;
+}
+
+.nav-btn {
+    padding: 0.45rem 1.1rem;
     border-radius: 999px;
-    padding: .45rem 1.3rem;
-    font-size: .9rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border: 1px solid #8A1538;
+    background: white;
+    color: #8A1538;
+    cursor: pointer;
+}
+
+.nav-btn:hover {
+    background: #fdf2f6;
+}
+
+.nav-btn-primary {
+    background: #8A1538;
+    color: white;
     border: none;
 }
 
-.stTabs [data-baseweb="tab"]:hover {
-    background: #d5d7df;
-    color: #111827;
+.nav-btn-primary:hover {
+    background: #6e0f2c;
 }
 
-.stTabs [data-baseweb="tab"][aria-selected="true"] {
-    background: linear-gradient(135deg, #8A1538, #b11b49);
-    color: #ffffff !important;
-    font-weight: 700;
-    box-shadow: 0 4px 12px rgba(139, 20, 54, 0.35);
-}
+/* =============================
+   KEEP EXISTING CARDS & TABS
+   ============================= */
 
-/* CARDS */
 .card {
     background: white;
-    padding: 1.5rem 1.7rem;
-    border-radius: 16px;
+    padding: 1.4rem 1.6rem;
+    border-radius: 18px;
     margin-bottom: 1.2rem;
-    border: 1px solid #e5e7eb;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.06);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
 }
 
 .step-title {
     color: #8A1538;
-    font-size: 1.3rem;
+    font-size: 1.2rem;
     font-weight: 700;
+    margin-bottom: 0.4rem;
 }
 
 .step-help {
     color: #555;
-    font-size: .95rem;
-}
-
-/* TOOL TAGS */
-.tool-tag {
-    display: inline-block;
-    background: #fde7f0;
-    color: #8A1538;
-    border-radius: 999px;
-    padding: 4px 12px;
-    font-size: .75rem;
-    margin-top: 4px;
-    margin-right: 4px;
-}
-
-/* BUTTONS */
-.stButton > button {
-    background: linear-gradient(135deg, #8A1538, #b11b49);
-    color: white;
-    border-radius: 999px;
-    border: none;
-    padding: .5rem 1.4rem;
-    font-weight: 600;
-    font-size: .9rem;
-    box-shadow: 0 4px 12px rgba(139, 20, 54, 0.35);
-}
-
-.stButton > button:hover {
-    background: #7a0e31;
-}
-
-/* Download button */
-.stDownloadButton > button {
-    background: white;
-    color: #374151;
-    border: 1px solid #d1d5db;
-    border-radius: 999px;
-    padding: .45rem 1.2rem;
-    font-size: .85rem;
-}
-
-.stDownloadButton > button:hover {
-    background: #f3eeff;
-    border-color: #c4c7ff;
-}
-
-/* CODE STYLE */
-.stMarkdown code, code {
-    background: #fde7f0;
-    color: #8A1538;
-    padding: 3px 8px;
-    border-radius: 6px;
-    font-family: "JetBrains Mono", monospace;
-    font-size: .85rem;
-}
-
-/* DATAFRAME / TEXT */
-.stDataFrame, .stMarkdown, .stText {
-    color: #1f2937 !important;
+    font-size: 0.9rem;
 }
 
 </style>
 """
+
 
 
 # ==============================
