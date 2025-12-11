@@ -711,97 +711,64 @@ def main():
         st.markdown("</div>", unsafe_allow_html=True)
 
     # -------- GENERATE WORKSHEETS TAB --------
-    with tab_generate:
-        st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.markdown('<div class="step-title">Step 4 — Generate worksheets (PDF only)</div>', unsafe_allow_html=True)
-        st.markdown(
-            """
-            <span class="tool-tag">GPT API</span>
-            <span class="tool-tag">RAG</span>
-            <span class="tool-tag">PDF export</span>
-            <p class="step-help">
-            For each student in the selected skill and level, the system generates a personalised worksheet
-            and a separate answer key. Only download buttons are shown (no raw text on screen).
-            </p>
-            """,
-            unsafe_allow_html=True,
-        )
+# -------- STEP 4: Generate worksheets (PDF only) --------
+with tab_generate:
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.markdown('<div class="step-title">Step 4 — Generate worksheets (PDF only)</div>', unsafe_allow_html=True)
+    st.markdown("""
+    <p class="step-help">
+    For each student in the selected skill and level, the system generates a personalised worksheet
+    and a separate answer key. Only PDF download buttons are shown.
+    </p>
+    """, unsafe_allow_html=True)
 
-        df = st.session_state.get("processed_df", None)
-        curriculum_df = st.session_state.get("curriculum_df", None)
+    # Choose skill
+    skill = st.selectbox(
+        "Choose skill",
+        ["LanguageFunction", "ReadingComprehension", "Grammar", "Writing"]
+    )
 
-        if df is None:
-            st.info("Please go to the 'Data & RAG' tab and process the student data first.")
-        else:
-            skills = sorted(df["skill"].unique())
-            selected_skill = st.selectbox("Choose skill", skills)
+    # Choose performance level
+    selected_level = st.selectbox("Choose performance level", ["Low", "Medium", "High"])
 
-            levels = ["Low", "Medium", "High"]
-            selected_level = st.selectbox("Choose performance level", levels)
+    processed_df = st.session_state.get("processed_df", None)
 
-            num_q = st.slider("Number of questions per worksheet", 3, 10, 5)
+    if processed_df is None:
+        st.warning("Please process the student data in Step 3 before generating worksheets.")
+    else:
+        group_df = processed_df[processed_df["level"] == selected_level]
 
-            target_df = df[(df["skill"] == selected_skill) & (df["level"] == selected_level)]
+        st.write(f"Students in this group: **{len(group_df)}**")
 
-            st.markdown(f"Students in this group: **{len(target_df)}**")
+        # Generate PDFs
+        if st.button("Generate PDFs for this group"):
+            if len(group_df) == 0:
+                st.warning("There are no students in this category.")
+            else:
+                with st.spinner("Generating personalised PDF worksheets…"):
+                    pdf_results = generate_pdfs_for_group(group_df, skill)
 
-            if st.button("Generate PDFs for this group"):
-                if target_df.empty:
-                    st.error("No students match this skill + level.")
-                else:
-                    with st.spinner("Generating worksheets and answer keys…"):
-                        try:
-                            for _, row in target_df.iterrows():
-                                rag_context = build_rag_context(
-                                    curriculum_df,
-                                    skill=row["skill"],
-                                    curriculum_grade=row["target_curriculum_grade"],
-                                )
+                st.success("PDF worksheets are ready!")
 
-                                full_text = generate_worksheet(
-                                    client=client,
-                                    student_name=row["student_name"],
-                                    student_grade=row["grade"] if "grade" in row else 5,
-                                    curriculum_grade=row["target_curriculum_grade"],
-                                    skill=row["skill"],
-                                    level=row["level"],
-                                    num_questions=num_q,
-                                    rag_context=rag_context,
-                                )
+                for item in pdf_results:
+                    col1, col2 = st.columns(2)
 
-                                worksheet_body, answer_key = split_worksheet_and_answer(full_text)
+                    with col1:
+                        st.download_button(
+                            label=f"Download Worksheet — {item['name']}",
+                            data=item["worksheet"],
+                            file_name=f"{item['name']}_worksheet.pdf",
+                            mime="application/pdf"
+                        )
+                    with col2:
+                        st.download_button(
+                            label=f"Download Answer Key — {item['name']}",
+                            data=item["answer_key"],
+                            file_name=f"{item['name']}_answers.pdf",
+                            mime="application/pdf"
+                        )
 
-                                ws_pdf = text_to_pdf(
-                                    title=f"Worksheet for {row['student_name']}",
-                                    content=worksheet_body,
-                                )
-                                ak_pdf = text_to_pdf(
-                                    title=f"Answer Key for {row['student_name']}",
-                                    content=answer_key,
-                                )
-
-                                st.markdown(f"#### {row['student_name']}")
-                                c1, c2 = st.columns(2)
-                                with c1:
-                                    st.download_button(
-                                        label="Download worksheet PDF",
-                                        data=ws_pdf,
-                                        file_name=f"worksheet_{row['student_name']}.pdf",
-                                        mime="application/pdf",
-                                    )
-                                with c2:
-                                    st.download_button(
-                                        label="Download answer key PDF",
-                                        data=ak_pdf,
-                                        file_name=f"answer_key_{row['student_name']}.pdf",
-                                        mime="application/pdf",
-                                    )
-
-                            st.success("All PDFs generated successfully ✅")
-                        except Exception as e:
-                            st.error(f"Error while generating worksheets: {e}")
-
-        st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
     # -------- HELP TAB --------
     with tab_help:
