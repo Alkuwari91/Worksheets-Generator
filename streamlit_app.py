@@ -588,29 +588,14 @@ def main():
             """,
             unsafe_allow_html=True,
         )
-
-    # ========== DATA & RAG TAB ==========
+    # -------- DATA & RAG TAB --------
     with tab_data:
-        # ---- STEP 1: upload students CSV ----
+
+        # STEP 1 — upload CSV
         st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.markdown(
-            '<div class="step-title">Step 1 — Upload student performance CSV</div>',
-            unsafe_allow_html=True,
-        )
-        st.markdown(
-            """
-            <span class="tool-tag">Pandas</span>
-            <span class="tool-tag">Data validation</span>
-            <p class="step-help">
-            Expected format (from thesis dataset):
-            <code>StudentNumber, StudentName, LanguageFunction, ReadingComprehension, Grammar, Writing</code>
-            </p>
-            """,
-            unsafe_allow_html=True,
-        )
+        st.markdown('<div class="step-title">Step 1 — Upload student performance CSV</div>', unsafe_allow_html=True)
 
         uploaded = st.file_uploader("Upload Students.csv", type=["csv"])
-
         if uploaded is not None:
             try:
                 df_raw = pd.read_csv(uploaded)
@@ -622,29 +607,11 @@ def main():
 
         st.markdown("</div>", unsafe_allow_html=True)
 
-        # ---- STEP 2: curriculum bank (RAG) ----
+        # STEP 2 — Curriculum RAG
         st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.markdown(
-            '<div class="step-title">Step 2 — Curriculum bank for RAG (optional)</div>',
-            unsafe_allow_html=True,
-        )
-        st.markdown(
-            """
-            <span class="tool-tag">RAG</span>
-            <span class="tool-tag">Curriculum bank</span>
-            <p class="step-help">
-            Upload a small CSV with at least columns <code>grade</code> and <code>skill</code>,
-            plus any descriptive fields (objective, topic, example, etc.).
-            The app will retrieve rows matching the target grade and skill and inject them into the GPT prompt.
-            </p>
-            """,
-            unsafe_allow_html=True,
-        )
+        st.markdown('<div class="step-title">Step 2 — Curriculum bank (RAG)</div>', unsafe_allow_html=True)
 
-        curriculum_file = st.file_uploader(
-            "Upload curriculum bank CSV (optional)", type=["csv"], key="curriculum_csv"
-        )
-
+        curriculum_file = st.file_uploader("Upload curriculum CSV (optional)", type=["csv"], key="curriculum_csv")
         if curriculum_file is not None:
             try:
                 cur_df = pd.read_csv(curriculum_file)
@@ -656,46 +623,21 @@ def main():
 
         st.markdown("</div>", unsafe_allow_html=True)
 
-        # ---- STEP 3: process & classify (كلها داخل نفس التاب الآن) ----
+        # STEP 3 — Process Data
         st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.markdown(
-            '<div class="step-title">Step 3 — Process data & classify levels</div>',
-            unsafe_allow_html=True,
-        )
-        st.markdown(
-            """
-            <span class="tool-tag">Rule-based classifier</span>
-            <p class="step-help">
-            The system reshapes the data (Pandas), classifies each score into
-            Low / Medium / High, and maps it to a target curriculum grade
-            (3–6) based on your assessment rules.
-            </p>
-            """,
-            unsafe_allow_html=True,
-        )
+        st.markdown('<div class="step-title">Step 3 — Process data & classify levels</div>', unsafe_allow_html=True)
 
         if st.button("Process student data"):
-            #  نحصل على البيانات الخام التي خُزِّنت بعد الرفع في Step 1
             df_raw_state = st.session_state.get("df_raw", None)
-
             if df_raw_state is None:
                 st.error("Please upload the student performance CSV first.")
             else:
                 try:
-                    # 0) تحويل فورمات ملف الأطروحة إلى long format
                     df_proc = transform_thesis_format(df_raw_state)
-
-                    # 1) مستوى الأداء بناءً على الدرجة من 25
                     df_proc["level"] = df_proc["score"].apply(classify_level)
+                    df_proc["target_curriculum_grade"] = df_proc["score"].apply(score_to_curriculum_grade)
 
-                    # 2) المنهج المستهدف بناءً على الدرجة مباشرة
-                    df_proc["target_curriculum_grade"] = df_proc["score"].apply(
-                        score_to_curriculum_grade
-                    )
-
-                    # حفظ النتيجة في session state لاستخدامها في تبويب Generate Worksheets
                     st.session_state["processed_df"] = df_proc
-
                     st.success("Student data processed successfully ✓")
                     st.dataframe(df_proc, use_container_width=True)
 
@@ -704,8 +646,26 @@ def main():
 
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # ========== باقي التابات (Generate / Help) تظل كما هي عندك ==========
-    # with tab_generate:
+    # -------- GENERATE WORKSHEETS TAB --------
+    with tab_generate:
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.markdown('<div class="step-title">Step 4 — Generate worksheets (PDF only)</div>', unsafe_allow_html=True)
+
+        df = st.session_state.get("processed_df", None)
+        curriculum_df = st.session_state.get("curriculum_df", None)
+
+        if df is None:
+            st.info("Please process the student data first.")
+        else:
+            skills = sorted(df["skill"].unique())
+            selected_skill = st.selectbox("Choose skill", skills)
+            levels = ["Low", "Medium", "High"]
+            selected_level = st.selectbox("Choose performance level", levels)
+            num_q = st.slider("Number of questions", 3, 10, 5)
+
+            target_df = df[(df["skill"] == selected_skill) & (df["level"] == selected_level)]
+            st.markdown(f"Students in this group: **{len(target_df)}**")
+
     #     ...
     #
     # with tab_help:
