@@ -713,7 +713,7 @@ def main():
 
     # -------- GENERATE WORKSHEETS TAB --------
 # -------- STEP 4: Generate worksheets (PDF only) --------
-with tab_generate:
+    with tab_generate:
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown('<div class="step-title">Step 4 — Generate worksheets (PDF only)</div>', unsafe_allow_html=True)
     st.markdown("""
