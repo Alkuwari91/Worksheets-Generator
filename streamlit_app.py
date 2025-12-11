@@ -665,36 +665,48 @@ def main():
             unsafe_allow_html=True,
         )
 
-        if st.button("Process student data"):
-            df_raw_state = st.session_state.get("df_raw", None)
-            if df_raw_state is None:
-                st.error("Please upload the student performance CSV first.")
-            else:
-                try:
-          df_proc = transform_thesis_format(df_raw_state)
+    # STEP 3: process & classify
+    st.markdown(
+        """
+        <div class="card">
+          <div class="step-title">Step 3 — Process data & classify levels</div>
+          <p class="step-help">
+            The system reshapes the data (Pandas), classifies each score into
+            Low / Medium / High, and maps it to a target curriculum grade
+            (3–6) based on your assessment rules.
+          </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-# 1) مستوى الأداء بناءً على الدرجة من 25
-df_proc["level"] = df_proc["score"].apply(classify_level)
+    if st.button("Process student data"):
+        # نحصل على البيانات الخام التي خُزِّنت بعد الرفع في Step 1
+        df_raw_state = st.session_state.get("df_raw", None)
 
-# 2) المنهج المستهدف بناءً على الدرجة مباشرة
-df_proc["target_curriculum_grade"] = df_proc["score"].apply(score_to_curriculum_grade)
+        if df_raw_state is None:
+            st.error("Please upload the student performance CSV first.")
+        else:
+            try:
+                # 0) تحويل فورمات ملف الأطروحة إلى long format
+                df_proc = transform_thesis_format(df_raw_state)
 
-                    st.session_state["processed_df"] = df_proc
+                # 1) مستوى الأداء بناءً على الدرجة من 25
+                df_proc["level"] = df_proc["score"].apply(classify_level)
 
-                    st.success("Student data processed successfully ✔")
+                # 2) المنهج المستهدف بناءً على الدرجة مباشرة
+                df_proc["target_curriculum_grade"] = df_proc["score"].apply(
+                    score_to_curriculum_grade
+                )
 
-                    counts = df_proc["level"].value_counts()
-                    st.markdown("**Classification summary:**")
-                    st.markdown(
-                        f"- Low: {counts.get('Low', 0)} students  \n"
-                        f"- Medium: {counts.get('Medium', 0)} students  \n"
-                        f"- High: {counts.get('High', 0)} students"
-                    )
+                # حفظ النتيجة في session state لاستخدامها في تبويب Generate Worksheets
+                st.session_state["processed_df"] = df_proc
 
-                    st.write("Processed data preview:")
-                    st.dataframe(df_proc.head(), use_container_width=True)
-                except Exception as e:
-                    st.error(f"Error while processing data: {e}")
+                st.success("Student data processed successfully ✓")
+                st.dataframe(df_proc, use_container_width=True)
+
+            except Exception as e:
+                st.error(f"Error while processing data: {e}")
 
         st.markdown("</div>", unsafe_allow_html=True)
 
