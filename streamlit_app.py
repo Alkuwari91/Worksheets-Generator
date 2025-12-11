@@ -520,7 +520,6 @@ body, .stApp {
 # ==============================
 # Streamlit App
 # ==============================
-
 def main():
     st.set_page_config(
         page_title="English Worksheets Generator",
@@ -531,7 +530,7 @@ def main():
     # Apply global CSS
     st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
-    # Top navbar (UI only)
+    # ---------------- TOP NAVBAR (UI only) ----------------
     st.markdown(
         """
         <div class="navbar">
@@ -550,7 +549,7 @@ def main():
         unsafe_allow_html=True,
     )
 
-    # API KEY
+    # ---------------- API KEY ----------------
     api_key = get_api_key()
     if not api_key:
         st.error("OPENAI_API_KEY is missing. Add it in Settings → Secrets.")
@@ -558,7 +557,7 @@ def main():
 
     client = OpenAI(api_key=api_key)
 
-    # Session state
+    # ---------------- SESSION STATE ----------------
     if "df_raw" not in st.session_state:
         st.session_state["df_raw"] = None
     if "processed_df" not in st.session_state:
@@ -566,12 +565,12 @@ def main():
     if "curriculum_df" not in st.session_state:
         st.session_state["curriculum_df"] = None
 
-    # Tabs
+    # ---------------- TABS ----------------
     tab_overview, tab_data, tab_generate, tab_help = st.tabs(
         ["Overview", "Data & RAG", "Generate Worksheets", "Help & Tools"]
     )
 
-    # -------- OVERVIEW TAB --------
+    # ========== OVERVIEW TAB ==========
     with tab_overview:
         st.markdown(
             """
@@ -590,11 +589,14 @@ def main():
             unsafe_allow_html=True,
         )
 
-    # -------- DATA & RAG TAB --------
+    # ========== DATA & RAG TAB ==========
     with tab_data:
-        # STEP 1: upload students CSV
+        # ---- STEP 1: upload students CSV ----
         st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.markdown('<div class="step-title">Step 1 — Upload student performance CSV</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="step-title">Step 1 — Upload student performance CSV</div>',
+            unsafe_allow_html=True,
+        )
         st.markdown(
             """
             <span class="tool-tag">Pandas</span>
@@ -620,9 +622,12 @@ def main():
 
         st.markdown("</div>", unsafe_allow_html=True)
 
-        # STEP 2: curriculum bank (RAG)
+        # ---- STEP 2: curriculum bank (RAG) ----
         st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.markdown('<div class="step-title">Step 2 — Curriculum bank for RAG (optional)</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="step-title">Step 2 — Curriculum bank for RAG (optional)</div>',
+            unsafe_allow_html=True,
+        )
         st.markdown(
             """
             <span class="tool-tag">RAG</span>
@@ -651,64 +656,60 @@ def main():
 
         st.markdown("</div>", unsafe_allow_html=True)
 
-        # STEP 3: process and classify
+        # ---- STEP 3: process & classify (كلها داخل نفس التاب الآن) ----
         st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.markdown('<div class="step-title">Step 3 — Process data & classify levels</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="step-title">Step 3 — Process data & classify levels</div>',
+            unsafe_allow_html=True,
+        )
         st.markdown(
             """
             <span class="tool-tag">Rule-based classifier</span>
             <p class="step-help">
-            This step automatically analyzes student scores and assigns performance levels
-            (Low / Medium / High) based on fixed thresholds used in the thesis methodology.
+            The system reshapes the data (Pandas), classifies each score into
+            Low / Medium / High, and maps it to a target curriculum grade
+            (3–6) based on your assessment rules.
             </p>
             """,
             unsafe_allow_html=True,
         )
 
-    # STEP 3: process & classify
-    st.markdown(
-        """
-        <div class="card">
-          <div class="step-title">Step 3 — Process data & classify levels</div>
-          <p class="step-help">
-            The system reshapes the data (Pandas), classifies each score into
-            Low / Medium / High, and maps it to a target curriculum grade
-            (3–6) based on your assessment rules.
-          </p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+        if st.button("Process student data"):
+            #  نحصل على البيانات الخام التي خُزِّنت بعد الرفع في Step 1
+            df_raw_state = st.session_state.get("df_raw", None)
 
-    if st.button("Process student data"):
-        # نحصل على البيانات الخام التي خُزِّنت بعد الرفع في Step 1
-        df_raw_state = st.session_state.get("df_raw", None)
+            if df_raw_state is None:
+                st.error("Please upload the student performance CSV first.")
+            else:
+                try:
+                    # 0) تحويل فورمات ملف الأطروحة إلى long format
+                    df_proc = transform_thesis_format(df_raw_state)
 
-        if df_raw_state is None:
-            st.error("Please upload the student performance CSV first.")
-        else:
-            try:
-                # 0) تحويل فورمات ملف الأطروحة إلى long format
-                df_proc = transform_thesis_format(df_raw_state)
+                    # 1) مستوى الأداء بناءً على الدرجة من 25
+                    df_proc["level"] = df_proc["score"].apply(classify_level)
 
-                # 1) مستوى الأداء بناءً على الدرجة من 25
-                df_proc["level"] = df_proc["score"].apply(classify_level)
+                    # 2) المنهج المستهدف بناءً على الدرجة مباشرة
+                    df_proc["target_curriculum_grade"] = df_proc["score"].apply(
+                        score_to_curriculum_grade
+                    )
 
-                # 2) المنهج المستهدف بناءً على الدرجة مباشرة
-                df_proc["target_curriculum_grade"] = df_proc["score"].apply(
-                    score_to_curriculum_grade
-                )
+                    # حفظ النتيجة في session state لاستخدامها في تبويب Generate Worksheets
+                    st.session_state["processed_df"] = df_proc
 
-                # حفظ النتيجة في session state لاستخدامها في تبويب Generate Worksheets
-                st.session_state["processed_df"] = df_proc
+                    st.success("Student data processed successfully ✓")
+                    st.dataframe(df_proc, use_container_width=True)
 
-                st.success("Student data processed successfully ✓")
-                st.dataframe(df_proc, use_container_width=True)
-
-            except Exception as e:
-                st.error(f"Error while processing data: {e}")
+                except Exception as e:
+                    st.error(f"Error while processing data: {e}")
 
         st.markdown("</div>", unsafe_allow_html=True)
+
+    # ========== باقي التابات (Generate / Help) تظل كما هي عندك ==========
+    # with tab_generate:
+    #     ...
+    #
+    # with tab_help:
+    #     ...
 
     # -------- GENERATE WORKSHEETS TAB --------
 # -------- STEP 4: Generate worksheets (PDF only) --------
