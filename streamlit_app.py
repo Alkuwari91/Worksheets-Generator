@@ -90,31 +90,49 @@ def transform_thesis_format(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def build_skill_instruction(skill: str) -> str:
-    """Return extra instructions depending on the skill name."""
+    """Return detailed instructions depending on the skill name."""
     s = str(skill).lower()
+
     if "grammar" in s:
         return (
-            "Focus the questions on grammar usage, sentence structure, verb tenses, "
-            "and error-correction style MCQs, appropriate for the target grade."
+            "The worksheet must explicitly assess GRAMMAR. "
+            "Use multiple-choice questions that focus on: verb tenses, subject–verb agreement, "
+            "prepositions, articles, comparative/superlative forms, and sentence structure. "
+            "Use short sentences similar to those in the Qatari English tests. "
+            "DO NOT ask general reading questions here; every question must check a grammar rule."
         )
+
     if "reading" in s:
         return (
-            "Focus the questions on reading comprehension: main idea, details, "
-            "inference, and vocabulary in context related to the passage."
+            "The worksheet must explicitly assess READING COMPREHENSION. "
+            "Write one short passage and then create questions about: main idea, supporting details, "
+            "true/false, inference, and vocabulary in context. "
+            "Questions should follow the style of school tests: 'What is the main idea of the text?', "
+            "'Why does ...?', 'The underlined word means ...'. "
+            "Do NOT test grammar rules here unless they are part of understanding the text."
         )
+
     if "writing" in s:
         return (
-            "Focus the questions on writing skills: organising ideas, choosing "
-            "correct connectors, and building clear sentences."
+            'The worksheet must explicitly assess WRITING. '
+            "Focus on sentence and short-paragraph level tasks, for example: choosing the best topic sentence, "
+            "ordering jumbled sentences to form a paragraph, completing a sentence with a suitable connector, "
+            "or choosing the sentence with correct punctuation and capitalisation. "
+            "Questions are still MCQ (A–D) but always about how to write better sentences."
         )
+
     if "languagefunction" in s or "language function" in s:
         return (
-            "Focus the questions on language functions such as making requests, "
-            "giving advice, asking for information, agreeing and disagreeing, etc."
+            "The worksheet must explicitly assess LANGUAGE FUNCTIONS. "
+            "Each question should present a short situation or dialogue, and the student chooses the best "
+            "response or expression (e.g. making requests, giving advice, inviting, apologising, agreeing, "
+            "disagreeing, asking for information). "
+            "Use prompts like: 'What would you say?', 'Choose the correct reply', "
+            "and short dialogues with a missing line."
         )
+
     return (
-        "Make sure the questions clearly practise the given skill in an "
-        "age-appropriate way."
+        "Make sure all questions clearly practise the given skill in an age-appropriate way."
     )
 
 
