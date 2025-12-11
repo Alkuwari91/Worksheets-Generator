@@ -406,6 +406,27 @@ def main():
     )
 
     st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
+# PROFESSIONAL NAVBAR
+st.markdown("""
+<div class="navbar">
+
+    <div class="nav-left">
+        <div class="nav-logo">English Worksheets Generator</div>
+    </div>
+
+    <div class="nav-menu">
+        <a class="nav-item" href="#">Home</a>
+        <a class="nav-item" href="#">Worksheets</a>
+        <a class="nav-item" href="#">Help</a>
+    </div>
+
+    <div class="nav-right">
+        <button class="nav-btn">Sign in</button>
+        <button class="nav-btn nav-btn-primary">Sign up</button>
+    </div>
+
+</div>
+""", unsafe_allow_html=True)
 
     # HEADER
     st.markdown(
