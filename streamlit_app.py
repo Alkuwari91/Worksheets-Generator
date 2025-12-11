@@ -1,14 +1,17 @@
 import os
 import io
+
 import pandas as pd
 import streamlit as st
 from openai import OpenAI
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 
+
 # ==============================
 # Helper functions
 # ==============================
+
 
 def get_api_key() -> str:
     """Get OpenAI API key from environment or Streamlit secrets."""
@@ -169,6 +172,7 @@ Curriculum RAG context (reference material from the official curriculum bank):
 
 Use this information to align the passage topic, vocabulary, and question focus
 with the curriculum expectations for this grade and skill.
+
 """
 
     user_prompt = f"""
@@ -275,47 +279,94 @@ def text_to_pdf(title: str, content: str) -> bytes:
 
 
 # ==============================
-# Custom CSS (nice UI)
+# Custom CSS (professional UI)
 # ==============================
 
 CUSTOM_CSS = """
 <style>
 
-/* Hide Streamlit default header */
+/* Hide Streamlit default header/footer */
 header, footer {visibility: hidden;}
 
 /* Global app styles */
 body, .stApp {
-    background: #f4f5f7;
+    background: #f6f7fb;
     font-family: "Cairo", sans-serif;
-    color: #1f2937;
+    color: #111827;
 }
 
-/* HEADER */
-.app-header {
+/* =============================
+   TOP NAVBAR (HEADER)
+   ============================= */
+.navbar {
+    position: sticky;
+    top: 0;
+    z-index: 999;
     width: 100%;
-    padding: 1.6rem 2rem;
-    background: linear-gradient(135deg, #8A1538, #5e0d24);
-    border-radius: 0 0 20px 20px;
-    color: #ffffff;
-    margin-bottom: 1.5rem;
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.20);
+    background: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 0.9rem 2.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
 }
 
-.header-title {
-    font-size: 2.2rem;
+.nav-left {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.nav-logo {
+    font-size: 1.35rem;
     font-weight: 800;
     letter-spacing: .3px;
+    color: #8A1538;
 }
 
-.header-sub {
-    font-size: 1rem;
-    opacity: .95;
+.nav-subtitle {
+    font-size: .85rem;
+    color: #6b7280;
 }
 
-/* TABS */
+/* RIGHT SIDE BUTTONS */
+.nav-right {
+    display: flex;
+    gap: 0.6rem;
+    align-items: center;
+}
+
+.nav-btn {
+    padding: 0.4rem 1.1rem;
+    border-radius: 999px;
+    font-size: .8rem;
+    font-weight: 600;
+    border: 1px solid #8A1538;
+    background: #ffffff;
+    color: #8A1538;
+    cursor: pointer;
+}
+
+.nav-btn:hover {
+    background: #fdf2f6;
+}
+
+.nav-btn-primary {
+    background: #8A1538;
+    color: #ffffff;
+    border: none;
+}
+
+.nav-btn-primary:hover {
+    background: #6e0f2c;
+}
+
+/* =============================
+   TABS
+   ============================= */
 .stTabs {
-    margin-top: .5rem;
+    margin-top: 1.0rem;
     margin-bottom: 1.2rem;
 }
 
@@ -324,16 +375,16 @@ body, .stApp {
 }
 
 .stTabs [data-baseweb="tab"] {
-    background: #e8eaf0;
+    background: #e5e7eb;
     color: #4b5563;
     border-radius: 999px;
-    padding: .45rem 1.3rem;
+    padding: .4rem 1.3rem;
     font-size: .9rem;
     border: none;
 }
 
 .stTabs [data-baseweb="tab"]:hover {
-    background: #d5d7df;
+    background: #d1d5db;
     color: #111827;
 }
 
@@ -344,28 +395,31 @@ body, .stApp {
     box-shadow: 0 4px 12px rgba(139, 20, 54, 0.35);
 }
 
-/* CARDS */
+/* =============================
+   CARDS
+   ============================= */
 .card {
-    background: white;
+    background: #ffffff;
     padding: 1.5rem 1.7rem;
     border-radius: 16px;
     margin-bottom: 1.2rem;
     border: 1px solid #e5e7eb;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.06);
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
 }
 
 .step-title {
     color: #8A1538;
-    font-size: 1.3rem;
+    font-size: 1.25rem;
     font-weight: 700;
+    margin-bottom: .25rem;
 }
 
 .step-help {
-    color: #555;
+    color: #4b5563;
     font-size: .95rem;
 }
 
-/* TOOL TAGS */
+/* Tool tags */
 .tool-tag {
     display: inline-block;
     background: #fde7f0;
@@ -377,10 +431,10 @@ body, .stApp {
     margin-right: 4px;
 }
 
-/* BUTTONS */
+/* Buttons */
 .stButton > button {
     background: linear-gradient(135deg, #8A1538, #b11b49);
-    color: white;
+    color: #ffffff;
     border-radius: 999px;
     border: none;
     padding: .5rem 1.4rem;
@@ -395,7 +449,7 @@ body, .stApp {
 
 /* Download button */
 .stDownloadButton > button {
-    background: white;
+    background: #ffffff;
     color: #374151;
     border: 1px solid #d1d5db;
     border-radius: 999px;
@@ -404,11 +458,11 @@ body, .stApp {
 }
 
 .stDownloadButton > button:hover {
-    background: #f3eeff;
+    background: #f3f4ff;
     border-color: #c4c7ff;
 }
 
-/* CODE STYLE */
+/* Code style */
 .stMarkdown code, code {
     background: #fde7f0;
     color: #8A1538;
@@ -418,9 +472,9 @@ body, .stApp {
     font-size: .85rem;
 }
 
-/* DATAFRAME / TEXT */
+/* Dataframe / text color fix */
 .stDataFrame, .stMarkdown, .stText {
-    color: #1f2937 !important;
+    color: #111827 !important;
 }
 
 </style>
@@ -438,15 +492,22 @@ def main():
         initial_sidebar_state="collapsed",
     )
 
+    # Apply global CSS
     st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
-    # HEADER
+    # Top navbar (UI only)
     st.markdown(
         """
-        <div class="app-header">
-            <div class="header-title">English Worksheets Generator</div>
-            <div class="header-sub">
-                Prototype for adaptive remedial worksheets using Pandas + RAG + GPT API
+        <div class="navbar">
+            <div class="nav-left">
+                <div class="nav-logo">English Worksheets Generator</div>
+                <div class="nav-subtitle">
+                    Adaptive English worksheets aligned with the Qatari curriculum
+                </div>
+            </div>
+            <div class="nav-right">
+                <button class="nav-btn">Sign in</button>
+                <button class="nav-btn nav-btn-primary">Sign up</button>
             </div>
         </div>
         """,
