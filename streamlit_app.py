@@ -1,22 +1,16 @@
 import os
 import io
-from typing import Tuple, Optional
-
 import pandas as pd
 import streamlit as st
 from openai import OpenAI
-
-# PDF generation
-from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
-from reportlab.lib.units import cm
-
+from reportlab.pdfgen import canvas
 
 # ==============================
 # Helper functions
 # ==============================
 
-def get_api_key() -> Optional[str]:
+def get_api_key() -> str:
     """Get OpenAI API key from environment or Streamlit secrets."""
     key = os.getenv("OPENAI_API_KEY")
     if not key:
@@ -27,298 +21,123 @@ def get_api_key() -> Optional[str]:
     return key
 
 
+def classify_level(score: float) -> str:
+    """
+    Simple fixed thresholds based on thesis idea:
+    Low:    < 50
+    Medium: 50–74
+    High:   >= 75
+    """
+    if score < 50:
+        return "Low"
+    elif score < 75:
+        return "Medium"
+    return "High"
+
+
 def transform_thesis_format(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Convert Marwa's thesis dataset into long format if it matches
-    the expected columns (StudentNumber, StudentName, LanguageFunction, ReadingComprehension, Grammar, Writing).
-    Otherwise returns the dataframe as is.
+    Convert thesis dataset into long format (one row per student & skill).
+    Expected columns:
+    StudentNumber, StudentName, LanguageFunction, ReadingComprehension, Grammar, Writing
     """
     thesis_cols = {
-        "StudentNumber",
-        "StudentName",
-        "LanguageFunction",
-        "ReadingComprehension",
-        "Grammar",
-        "Writing",
+        "StudentNumber", "StudentName",
+        "LanguageFunction", "ReadingComprehension",
+        "Grammar", "Writing"
     }
 
     if thesis_cols.issubset(df.columns):
         df_long = df.melt(
             id_vars=["StudentNumber", "StudentName"],
             value_vars=[
-                "LanguageFunction",
-                "ReadingComprehension",
-                "Grammar",
-                "Writing",
+                "LanguageFunction", "ReadingComprehension",
+                "Grammar", "Writing"
             ],
             var_name="skill",
             value_name="score",
-        ).reset_index(drop=True)
-
-        df_long = df_long.rename(
-            columns={
-                "StudentNumber": "student_id",
-                "StudentName": "student_name",
-            }
         )
+
+        df_long = df_long.rename(columns={
+            "StudentNumber": "student_id",
+            "StudentName": "student_name",
+        })
         return df_long
 
-    # Assume already in long format with columns:
-    # student_id, student_name, skill, score
+    # If already in long format, just return as is
     return df
 
 
-def map_score_to_curriculum_grade(score: float) -> int:
-    """
-    Map student's score in a given skill to a curriculum grade:
-    - 23 or above  -> Grade 6
-    - 22 to 15     -> Grade 5
-    - 14 or below  -> Grade 4 (we will also mention Grade 3 in the prompt for scaffolding)
-    """
-    if score >= 23:
-        return 6
-    elif score >= 15:
-        return 5
-    else:
-        return 4
-
-
-def classify_performance_band(score: float) -> str:
-    """
-    Simple band label just for display:
-    High   -> score >= 23
-    Medium -> 15 <= score <= 22
-    Low    -> score < 15
-    """
-    if score >= 23:
-        return "High"
-    elif score >= 15:
-        return "Medium"
-    return "Low"
-
-
-def build_skill_template(skill: str, curriculum_grade: int) -> str:
-    """
-    Return detailed instructions for GPT about the exact question types
-    and format to use for this skill and curriculum grade.
-    """
-
-    s = skill.lower().strip()
-
-    # --------- READING ----------
-    if "reading" in s:
-        return f"""
-Reading Comprehension (based on Qatar English curriculum, Grade {curriculum_grade}):
-
-- Write ONE reading passage of about 80–120 words.
-- The topic and difficulty must be suitable for Grade {curriculum_grade}.
-- Then create EXACTLY 4 questions in this format:
-
-1) Multiple-choice question about the MAIN IDEA of the whole text
-   - four options (A, B, C, D), only one correct.
-
-2) Multiple-choice vocabulary question about the meaning of an underlined word from the text
-   - four options (A, B, C, D).
-
-3) Short-answer WH-question (Why / How / Where / Who) based on specific information.
-
-4) Short-answer WH-question based on another detail in the passage.
-
-Number the questions as 1), 2), 3), 4) and label the options A), B), C), D).
-"""
-
-    # --------- GRAMMAR ----------
+def build_skill_instruction(skill: str) -> str:
+    """Return extra instructions depending on the skill name."""
+    s = str(skill).lower()
     if "grammar" in s:
-        return f"""
-Grammar section (Grade {curriculum_grade}):
-
-Create EXACTLY 4 questions in the SAME style as ministry mid-term tests:
-
-13) Multiple-choice grammar question with four options (A, B, C, D).
-14) Multiple-choice verb tense question (choose the correct verb form) with four options.
-15) "Do as shown between brackets": give a sentence with a verb in brackets
-    and ask the student to correct the verb form.
-16) Another "Do as shown between brackets" sentence to correct the verb.
-
-Use present simple / past simple / continuous forms appropriate for Grade {curriculum_grade}.
-Number the items 13), 14), 15), 16) and keep the stem in clear exam style.
-"""
-
-    # --------- VOCABULARY ----------
-    if "vocab" in s:
-        return f"""
-Vocabulary section (Grade {curriculum_grade}):
-
-- Create a word box with 4–6 words from the Grade {curriculum_grade} curriculum.
-- Then write 4 sentences with ONE gap each.
-- The instruction must be: "Fill in the gaps with suitable words from the box."
-- Number them 9), 10), 11), 12).
-
-Example structure (you must generate new content, not copy):
-VOCABULARY
-
-Fill in the gaps with suitable words from the box:
-(word1 – word2 – word3 – word4)
-
-9) ......
-10) ......
-11) ......
-12) ......
-"""
-
-    # --------- LANGUAGE FUNCTIONS ----------
-    if "language" in s or "function" in s:
-        return f"""
-Language Functions section (Grade {curriculum_grade}):
-
-Create a MATCHING activity A/B, same as ministry style:
-
-- Column A: four questions or sentence starters (1–4).
-- Column B: four answers (a–d).
-- The instruction must be: "Read and match."
-
-Example of structure (you must generate new content, not copy):
-LANGUAGE FUNCTIONS
-Read and match:
-
-A                               B
-1. How often do you ... ?       a. twice a day
-2. What was he doing ... ?      b. watering the plants
-3. Whose toys are these?        c. hers
-4. What did you do yesterday?   d. I went to the park
-"""
-
-    # --------- WRITING ----------
+        return (
+            "Focus the questions on grammar usage, sentence structure, verb tenses, "
+            "and error-correction style MCQs, appropriate for the target grade."
+        )
+    if "reading" in s:
+        return (
+            "Focus the questions on reading comprehension: main idea, details, "
+            "inference, and vocabulary in context related to the passage."
+        )
     if "writing" in s:
-        if curriculum_grade <= 3:
-            sentences = 4
-        elif curriculum_grade == 4:
-            sentences = 5
-        elif curriculum_grade == 5:
-            sentences = 6
-        else:
-            sentences = 7
-
-        return f"""
-Writing task (Grade {curriculum_grade}):
-
-- Ask the student to write a paragraph of about {sentences} sentences.
-- The topic must be suitable for Grade {curriculum_grade} and linked to daily life or school.
-- Give 3–5 guiding questions to support weaker learners.
-- The instruction must be clear, for example:
-
-"Write a paragraph of about {sentences} sentences about your favourite hobby.
-Use these guiding questions:
-• What is your hobby?
-• When do you usually do it?
-• Where do you do it?
-• Why do you like it?
-• Who do you do it with?"
-
-Only write the TASK instructions, do NOT write the model answer.
-"""
-
-    # Default fallback
-    return f"""
-Create a short, curriculum-aligned English activity for Grade {curriculum_grade}
-with 4 clear questions. Use a style similar to Qatar English mid-term exam questions.
-"""
+        return (
+            "Focus the questions on writing skills: organising ideas, choosing "
+            "correct connectors, and building clear sentences."
+        )
+    if "languagefunction" in s or "language function" in s:
+        return (
+            "Focus the questions on language functions such as making requests, "
+            "giving advice, asking for information, agreeing and disagreeing, etc."
+        )
+    return (
+        "Make sure the questions clearly practise the given skill in an "
+        "age-appropriate way."
+    )
 
 
-def build_rag_context(
-    curriculum_df: Optional[pd.DataFrame],
-    skill: str,
-    curriculum_grade: int,
-    max_rows: int = 6,
-) -> str:
+def build_rag_context(curriculum_df: pd.DataFrame, skill: str, curriculum_grade: int) -> str:
     """
-    Simple RAG context builder from a local curriculum_bank.csv.
-    Expected columns (flexible): grade, skill, topic, objective, example
+    Very simple RAG: filter curriculum bank by grade & skill and
+    convert rows into short bullet points.
+    Expected columns: grade, skill, plus any other descriptive columns.
     """
     if curriculum_df is None:
         return ""
 
-    df = curriculum_df.copy()
-
-    # Optional filters if columns exist
-    if "grade" in df.columns:
-        df = df[df["grade"] == curriculum_grade]
-
-    skill_lower = skill.lower()
-    if "skill" in df.columns:
-        df = df[df["skill"].str.lower().str.contains(skill_lower, na=False)]
-
-    if df.empty:
+    required_cols = {"grade", "skill"}
+    if not required_cols.issubset(curriculum_df.columns):
         return ""
 
-    df = df.head(max_rows)
+    try:
+        temp = curriculum_df.copy()
+        temp["grade_str"] = temp["grade"].astype(str)
+        mask = (
+            (temp["grade_str"] == str(curriculum_grade)) &
+            (temp["skill"].astype(str).str.lower() == str(skill).lower())
+        )
+        subset = temp[mask]
+        if subset.empty:
+            return ""
 
-    parts = []
-    for _, row in df.iterrows():
-        topic = row.get("topic", "")
-        obj = row.get("objective", "")
-        example = row.get("example", "")
-        piece = f"- Topic: {topic} | Objective: {obj} | Example: {example}"
-        parts.append(piece)
+        bullets = []
+        for _, row in subset.iterrows():
+            row_dict = row.to_dict()
+            row_dict.pop("grade_str", None)
+            g = row_dict.pop("grade", None)
+            sk = row_dict.pop("skill", None)
+            # Keep other fields as description
+            rest = " | ".join(
+                f"{k}: {v}"
+                for k, v in row_dict.items()
+                if pd.notna(v)
+            )
+            bullets.append(f"- Grade {g}, Skill {sk}: {rest}")
 
-    return "\n".join(parts)
-
-
-def split_worksheet_and_answer_key(full_text: str) -> Tuple[str, str]:
-    """
-    Split GPT output into worksheet vs answer key using the 'ANSWER KEY' marker.
-    If not found, returns the full text as worksheet and empty answer key.
-    """
-    if not full_text:
-        return "", ""
-
-    upper = full_text.upper()
-    marker = "ANSWER KEY"
-    idx = upper.find(marker)
-
-    if idx == -1:
-        return full_text.strip(), ""
-
-    worksheet = full_text[:idx].strip()
-    answer_key = full_text[idx:].strip()
-    return worksheet, answer_key
-
-
-def create_pdf_bytes(title: str, body_text: str) -> bytes:
-    """
-    Create a simple multi-line PDF in memory using ReportLab.
-    """
-    buffer = io.BytesIO()
-    c = canvas.Canvas(buffer, pagesize=A4)
-    width, height = A4
-
-    # Title
-    c.setFont("Helvetica-Bold", 14)
-    c.drawString(2 * cm, height - 2.5 * cm, title)
-
-    # Body
-    c.setFont("Helvetica", 11)
-    text_obj = c.beginText()
-    text_obj.setTextOrigin(2 * cm, height - 3.5 * cm)
-    text_obj.setLeading(14)
-
-    for line in body_text.splitlines():
-        if text_obj.getY() < 2 * cm:
-            c.drawText(text_obj)
-            c.showPage()
-            c.setFont("Helvetica", 11)
-            text_obj = c.beginText()
-            text_obj.setTextOrigin(2 * cm, height - 2.5 * cm)
-            text_obj.setLeading(14)
-        text_obj.textLine(line)
-
-    c.drawText(text_obj)
-    c.showPage()
-    c.save()
-
-    pdf_bytes = buffer.getvalue()
-    buffer.close()
-    return pdf_bytes
+        return "\n".join(bullets[:8])  # limit context
+    except Exception:
+        return ""
 
 
 def generate_worksheet(
@@ -328,63 +147,66 @@ def generate_worksheet(
     curriculum_grade: int,
     skill: str,
     level: str,
-    score: float,
-    rag_context: str = "",
+    num_questions: int = 5,
+    rag_context: str = ""
 ) -> str:
-    """
-    Generate worksheet text using GPT based on curriculum grade & skill template.
-    Includes an ANSWER KEY section at the end.
-    """
+    """Generate worksheet using GPT based on mapped curriculum grade, skill, and RAG context."""
 
-    if curriculum_grade == 4:
-        remediation_note = (
-            "This student is low-achieving in this skill. "
-            "Use Grade 4 objectives but also draw on simpler Grade 3 concepts "
-            "to provide extra scaffolding and support."
-        )
-    else:
-        remediation_note = (
-            "The difficulty should match the curriculum grade only, "
-            "with natural language support for the student."
-        )
-
-    skill_template = build_skill_template(skill, curriculum_grade)
+    skill_instruction = build_skill_instruction(skill)
 
     system_prompt = (
-        "You are an English curriculum expert and exam writer for Qatar primary schools. "
-        "You design remedial worksheets that follow the official mid-term test style. "
-        "Always follow the requested structure exactly (numbering, options, instructions). "
-        "Do NOT include explanations to the teacher; only write what the student will see on the worksheet."
+        "You are an educational content generator for primary school English "
+        "within the Qatari National Curriculum. Adjust difficulty and language "
+        "based on the TARGET curriculum grade. Keep content clear, culturally appropriate, "
+        "and suitable for students."
     )
 
-    rag_block = ""
+    rag_section = ""
     if rag_context:
-        rag_block = f"""
-Additional curriculum context (from the official bank). Use it to guide topics and vocabulary:
-
+        rag_section = f"""
+Curriculum RAG context (reference material from the official curriculum bank):
 {rag_context}
 
+Use this information to align the passage topic, vocabulary, and question focus
+with the curriculum expectations for this grade and skill.
 """
 
     user_prompt = f"""
 Student name: {student_name}
 Actual school grade: {student_grade}
+Target curriculum grade: {curriculum_grade}
 Skill: {skill}
-Score in this skill: {score}
-Mapped curriculum grade for the worksheet: {curriculum_grade}
-Performance level: {level}
+Performance level: {level} (Low / Medium / High)
 
-Remediation guidance:
-{remediation_note}
+Additional instructions about the skill:
+{skill_instruction}
 
-{rag_block}
-=== REQUIRED WORKSHEET FORMAT FOR THIS SKILL ===
-{skill_template}
-=== END OF FORMAT DESCRIPTION ===
+{rag_section}
 
-Now generate ONLY the worksheet content for {student_name}.
-At the end, add a clear section titled "ANSWER KEY:" listing the correct answers.
-Do NOT add extra commentary. Do NOT mention 'curriculum grade' explicitly in the text.
+Task:
+1. Write a short reading passage (80–120 words) appropriate for the target grade.
+2. The passage and questions must clearly practise the given skill.
+3. Create {num_questions} multiple-choice questions (A–D).
+4. Provide an answer key clearly.
+
+Required format (use exactly these headings):
+
+PASSAGE:
+<your passage>
+
+QUESTIONS:
+1) ...
+A) ...
+B) ...
+C) ...
+D) ...
+2) ...
+...
+
+ANSWER KEY:
+1) C
+2) A
+...
 """
 
     response = client.chat.completions.create(
@@ -393,17 +215,64 @@ Do NOT add extra commentary. Do NOT mention 'curriculum grade' explicitly in the
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ],
-        temperature=0.5,
+        temperature=0.6,
     )
 
     return response.choices[0].message.content
 
 
-# ==============================
-# Custom CSS (header + tabs + cards)
-# ==============================
+def split_worksheet_and_answer(text: str):
+    """Split GPT output into worksheet body (no answers) and answer key."""
+    marker = "ANSWER KEY:"
+    idx = text.upper().find(marker)
+    if idx == -1:
+        return text.strip(), "ANSWER KEY:\n(Not clearly provided by the model.)"
+    body = text[:idx].strip()
+    answer = text[idx:].strip()
+    return body, answer
 
-CUSTOM_CSS = """
+
+def text_to_pdf(title: str, content: str) -> bytes:
+    """
+    Convert text to a simple A4 PDF (in memory).
+    Returns the PDF as bytes so it can be downloaded in Streamlit.
+    """
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+
+    x = 40
+    y = height - 60
+
+    c.setFont("Helvetica-Bold", 14)
+    c.drawString(x, y, title)
+    y -= 30
+
+    c.setFont("Helvetica", 11)
+
+    for line in content.split("\n"):
+        while len(line) > 110:
+            part = line[:110]
+            c.drawString(x, y, part)
+            line = line[110:]
+            y -= 14
+            if y < 40:
+                c.showPage()
+                y = height - 60
+                c.setFont("Helvetica", 11)
+        c.drawString(x, y, line)
+        y -= 14
+        if y < 40:
+            c.showPage()
+            y = height - 60
+            c.setFont("Helvetica", 11)
+
+    c.showPage()
+    c.save()
+    pdf_bytes = buffer.getvalue()
+    buffer.close()
+    return pdf_bytes
+
 
 # ==============================
 # Custom CSS (nice UI)
@@ -555,7 +424,6 @@ body, .stApp {
 }
 
 </style>
-
 """
 
 
@@ -578,76 +446,65 @@ def main():
         <div class="app-header">
             <div class="header-title">English Worksheets Generator</div>
             <div class="header-sub">
-                Adaptive remedial worksheets aligned with Qatar English curriculum using Pandas + RAG + GPT API
+                Prototype for adaptive remedial worksheets using Pandas + RAG + GPT API
             </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    # API key
+    # API KEY
     api_key = get_api_key()
     if not api_key:
-        st.error("OPENAI_API_KEY is missing. Please add it in Settings → Secrets.")
+        st.error("OPENAI_API_KEY is missing. Add it in Settings → Secrets.")
         return
 
     client = OpenAI(api_key=api_key)
 
-    # Load curriculum bank once (optional)
+    # Session state
+    if "df_raw" not in st.session_state:
+        st.session_state["df_raw"] = None
+    if "processed_df" not in st.session_state:
+        st.session_state["processed_df"] = None
     if "curriculum_df" not in st.session_state:
-        try:
-            # You can change the path if you store it in a /data folder
-            cur_df = pd.read_csv("curriculum_bank.csv")
-            st.session_state["curriculum_df"] = cur_df
-        except Exception:
-            st.session_state["curriculum_df"] = None
+        st.session_state["curriculum_df"] = None
 
-    curriculum_df = st.session_state.get("curriculum_df", None)
-
+    # Tabs
     tab_overview, tab_data, tab_generate, tab_help = st.tabs(
         ["Overview", "Data & RAG", "Generate Worksheets", "Help & Tools"]
     )
 
-    # ----------------- OVERVIEW -----------------
+    # -------- OVERVIEW TAB --------
     with tab_overview:
-        st.markdown('<div class="card">', unsafe_allow_html=True)
         st.markdown(
             """
-            <div class="step-title">Welcome</div>
-            <p class="step-help">
-            This prototype analyses student performance data and generates
-            <b>curriculum-aligned remedial worksheets</b> for English skills
-            (Reading, Grammar, Vocabulary, Language Functions, Writing).
-            </p>
-            <ul>
-              <li>Upload your mid-term skill scores in CSV format.</li>
-              <li>The system maps each score to an appropriate curriculum grade:
-                <ul>
-                  <li><b>23 and above</b> → Grade 6</li>
-                  <li><b>22 to 15</b> → Grade 5</li>
-                  <li><b>14 and below</b> → Grade 4 (with Grade 3 support)</li>
-                </ul>
-              </li>
-              <li>For each student and skill, GPT generates exam-style questions and an answer key.</li>
-              <li>You can download the worksheet and answer key as PDFs.</li>
-            </ul>
+            <div class="card">
+                <div class="step-title">How the prototype works</div>
+                <p class="step-help">
+                This prototype follows three main steps:
+                </p>
+                <ol class="step-help">
+                  <li><b>Upload & process student performance data</b> (Pandas) to classify students into Low / Medium / High for each skill.</li>
+                  <li><b>Attach curriculum knowledge</b> via a small curriculum bank CSV. This is used as a simple <b>RAG</b> layer to ground GPT in real topics.</li>
+                  <li><b>Generate personalised worksheets</b> for each student using the GPT API, aligned with the selected skill and curriculum grade.</li>
+                </ol>
+            </div>
             """,
             unsafe_allow_html=True,
         )
-        st.markdown("</div>", unsafe_allow_html=True)
 
-    # ----------------- DATA & RAG -----------------
+    # -------- DATA & RAG TAB --------
     with tab_data:
+        # STEP 1: upload students CSV
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.markdown('<div class="step-title">Step 1 — Upload student performance CSV</div>', unsafe_allow_html=True)
         st.markdown(
             """
             <span class="tool-tag">Pandas</span>
-            <span class="tool-tag">Data preparation</span>
+            <span class="tool-tag">Data validation</span>
             <p class="step-help">
-            Upload the CSV file containing your students’ skill scores. The prototype expects
-            the thesis-style format:
-            <code>StudentNumber, StudentName, LanguageFunction, ReadingComprehension, Grammar, Writing</code>.
+            Expected format (from thesis dataset):
+            <code>StudentNumber, StudentName, LanguageFunction, ReadingComprehension, Grammar, Writing</code>
             </p>
             """,
             unsafe_allow_html=True,
@@ -655,185 +512,207 @@ def main():
 
         uploaded = st.file_uploader("Upload Students.csv", type=["csv"])
 
-        if uploaded is None:
-            st.info("Please upload a CSV file to continue.")
-            st.markdown("</div>", unsafe_allow_html=True)
-        else:
-            df_raw = pd.read_csv(uploaded)
-            st.write("Raw data preview:")
-            st.dataframe(df_raw.head(), use_container_width=True)
-            st.markdown("</div>", unsafe_allow_html=True)
+        if uploaded is not None:
+            try:
+                df_raw = pd.read_csv(uploaded)
+                st.session_state["df_raw"] = df_raw
+                st.write("Raw data preview:")
+                st.dataframe(df_raw.head(), use_container_width=True)
+            except Exception as e:
+                st.error(f"Could not read CSV: {e}")
 
-            # Step 2: curriculum bank for RAG
-            st.markdown('<div class="card">', unsafe_allow_html=True)
-            st.markdown('<div class="step-title">Step 2 — Curriculum bank for RAG</div>', unsafe_allow_html=True)
-            st.markdown(
-                """
-                <span class="tool-tag">RAG</span>
-                <span class="tool-tag">Curriculum bank</span>
-                <p class="step-help">
-                The curriculum bank is loaded automatically from <code>curriculum_bank.csv</code> (if available).
-                It is used to align topics and objectives with the Qatar English curriculum.
-                </p>
-                """,
-                unsafe_allow_html=True,
-            )
+        st.markdown("</div>", unsafe_allow_html=True)
 
-            if curriculum_df is None:
-                st.error("No curriculum bank loaded. Please ensure 'curriculum_bank.csv' exists if you want RAG support.")
-            else:
+        # STEP 2: curriculum bank (RAG)
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.markdown('<div class="step-title">Step 2 — Curriculum bank for RAG (optional)</div>', unsafe_allow_html=True)
+        st.markdown(
+            """
+            <span class="tool-tag">RAG</span>
+            <span class="tool-tag">Curriculum bank</span>
+            <p class="step-help">
+            Upload a small CSV with at least columns <code>grade</code> and <code>skill</code>,
+            plus any descriptive fields (objective, topic, example, etc.).
+            The app will retrieve rows matching the target grade and skill and inject them into the GPT prompt.
+            </p>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        curriculum_file = st.file_uploader(
+            "Upload curriculum bank CSV (optional)", type=["csv"], key="curriculum_csv"
+        )
+
+        if curriculum_file is not None:
+            try:
+                cur_df = pd.read_csv(curriculum_file)
+                st.session_state["curriculum_df"] = cur_df
                 st.write("Curriculum bank preview:")
-                st.dataframe(curriculum_df.head(), use_container_width=True)
+                st.dataframe(cur_df.head(), use_container_width=True)
+            except Exception as e:
+                st.error(f"Could not read curriculum bank: {e}")
 
-            st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
-            # Step 3: Process & classify
-            st.markdown('<div class="card">', unsafe_allow_html=True)
-            st.markdown('<div class="step-title">Step 3 — Process data & map curriculum levels</div>', unsafe_allow_html=True)
-            st.markdown(
-                """
-                <span class="tool-tag">Rule-based mapping</span>
-                <span class="tool-tag">Score bands</span>
-                <p class="step-help">
-                The system converts the data into long format (one row per student per skill)
-                and applies your score rules to decide which curriculum grade to use for each worksheet.
-                </p>
-                """,
-                unsafe_allow_html=True,
-            )
+        # STEP 3: process and classify
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.markdown('<div class="step-title">Step 3 — Process data & classify levels</div>', unsafe_allow_html=True)
+        st.markdown(
+            """
+            <span class="tool-tag">Rule-based classifier</span>
+            <p class="step-help">
+            This step automatically analyzes student scores and assigns performance levels
+            (Low / Medium / High) based on fixed thresholds used in the thesis methodology.
+            </p>
+            """,
+            unsafe_allow_html=True,
+        )
 
-            df_long = transform_thesis_format(df_raw)
+        if st.button("Process student data"):
+            df_raw_state = st.session_state.get("df_raw", None)
+            if df_raw_state is None:
+                st.error("Please upload the student performance CSV first.")
+            else:
+                try:
+                    df_proc = transform_thesis_format(df_raw_state)
+                    df_proc["level"] = df_proc["score"].apply(classify_level)
+                    # Map performance to curriculum grade:
+                    # Low -> 3, Medium -> 5, High -> 6 (example mapping)
+                    df_proc["target_curriculum_grade"] = df_proc["level"].map(
+                        {"Low": 3, "Medium": 5, "High": 6}
+                    )
+                    st.session_state["processed_df"] = df_proc
 
-            # Just for information: assume all students are in same actual grade? optional
-            df_long["grade"] = df_long.get("grade", 5)
+                    st.success("Student data processed successfully ✔")
 
-            df_long["performance_band"] = df_long["score"].apply(classify_performance_band)
-            df_long["target_curriculum_grade"] = df_long["score"].apply(map_score_to_curriculum_grade)
+                    counts = df_proc["level"].value_counts()
+                    st.markdown("**Classification summary:**")
+                    st.markdown(
+                        f"- Low: {counts.get('Low', 0)} students  \n"
+                        f"- Medium: {counts.get('Medium', 0)} students  \n"
+                        f"- High: {counts.get('High', 0)} students"
+                    )
 
-            st.write("Processed data:")
-            st.dataframe(df_long.head(20), use_container_width=True)
+                    st.write("Processed data preview:")
+                    st.dataframe(df_proc.head(), use_container_width=True)
+                except Exception as e:
+                    st.error(f"Error while processing data: {e}")
 
-            st.session_state["df_processed"] = df_long
-            st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
-    # ----------------- GENERATE WORKSHEETS -----------------
+    # -------- GENERATE WORKSHEETS TAB --------
     with tab_generate:
         st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.markdown('<div class="step-title">Generate remedial worksheets</div>', unsafe_allow_html=True)
+        st.markdown('<div class="step-title">Step 4 — Generate worksheets (PDF only)</div>', unsafe_allow_html=True)
         st.markdown(
             """
             <span class="tool-tag">GPT API</span>
+            <span class="tool-tag">RAG</span>
             <span class="tool-tag">PDF export</span>
             <p class="step-help">
-            Select a skill, and the system will generate exam-style worksheets and answer keys
-            for all students mapped to that skill.
-            The content is not shown on-screen; instead you get direct download links as PDFs.
+            For each student in the selected skill and level, the system generates a personalised worksheet
+            and a separate answer key. Only download buttons are shown (no raw text on screen).
             </p>
             """,
             unsafe_allow_html=True,
         )
 
-        df_processed = st.session_state.get("df_processed", None)
-        if df_processed is None:
-            st.info("Please upload and process a CSV file in the 'Data & RAG' tab first.")
-            st.markdown("</div>", unsafe_allow_html=True)
+        df = st.session_state.get("processed_df", None)
+        curriculum_df = st.session_state.get("curriculum_df", None)
+
+        if df is None:
+            st.info("Please go to the 'Data & RAG' tab and process the student data first.")
         else:
-            skills_available = sorted(df_processed["skill"].unique())
-            selected_skill = st.selectbox("Choose a skill", skills_available)
+            skills = sorted(df["skill"].unique())
+            selected_skill = st.selectbox("Choose skill", skills)
 
-            # Optionally filter by band
-            band_filter = st.selectbox("Filter by performance band (optional)", ["All", "High", "Medium", "Low"])
-            target_df = df_processed[df_processed["skill"] == selected_skill]
+            levels = ["Low", "Medium", "High"]
+            selected_level = st.selectbox("Choose performance level", levels)
 
-            if band_filter != "All":
-                target_df = target_df[target_df["performance_band"] == band_filter]
+            num_q = st.slider("Number of questions per worksheet", 3, 10, 5)
 
-            st.markdown(f"Students in this selection: **{len(target_df)}**")
+            target_df = df[(df["skill"] == selected_skill) & (df["level"] == selected_level)]
 
-            if st.button("Generate worksheets (PDF)"):
+            st.markdown(f"Students in this group: **{len(target_df)}**")
+
+            if st.button("Generate PDFs for this group"):
                 if target_df.empty:
-                    st.error("No students match the selected criteria.")
+                    st.error("No students match this skill + level.")
                 else:
-                    with st.spinner("Generating worksheets... please wait ⏳"):
-                        for idx, (_, row) in enumerate(target_df.iterrows(), start=1):
-                            student_name = str(row["student_name"])
-                            student_id = row.get("student_id", idx)
-                            skill = str(row["skill"])
-                            score = float(row["score"])
-                            band = row.get("performance_band", "")
-                            cur_grade = int(row["target_curriculum_grade"])
-                            actual_grade = int(row.get("grade", 5))
-
-                            rag_ctx = build_rag_context(curriculum_df, skill, cur_grade)
-
-                            full_text = generate_worksheet(
-                                client=client,
-                                student_name=student_name,
-                                student_grade=actual_grade,
-                                curriculum_grade=cur_grade,
-                                skill=skill,
-                                level=band,
-                                score=score,
-                                rag_context=rag_ctx,
-                            )
-
-                            worksheet_text, answer_key_text = split_worksheet_and_answer_key(full_text)
-
-                            ws_title = f"Worksheet for {student_name} ({skill})"
-                            ws_pdf = create_pdf_bytes(ws_title, worksheet_text)
-
-                            if answer_key_text:
-                                ak_title = f"Answer Key for {student_name} ({skill})"
-                                ak_pdf = create_pdf_bytes(ak_title, answer_key_text)
-                            else:
-                                ak_pdf = None
-
-                            st.markdown(f"#### {idx}. {student_name} — {skill} (Curriculum G{cur_grade}, {band})")
-
-                            col1, col2 = st.columns(2)
-                            with col1:
-                                st.download_button(
-                                    label="📄 Download worksheet (PDF)",
-                                    data=ws_pdf,
-                                    file_name=f"worksheet_{student_id}_{student_name}_{skill}.pdf",
-                                    mime="application/pdf",
-                                    key=f"ws_{idx}",
+                    with st.spinner("Generating worksheets and answer keys…"):
+                        try:
+                            for _, row in target_df.iterrows():
+                                rag_context = build_rag_context(
+                                    curriculum_df,
+                                    skill=row["skill"],
+                                    curriculum_grade=row["target_curriculum_grade"],
                                 )
-                            with col2:
-                                if ak_pdf:
+
+                                full_text = generate_worksheet(
+                                    client=client,
+                                    student_name=row["student_name"],
+                                    student_grade=row["grade"] if "grade" in row else 5,
+                                    curriculum_grade=row["target_curriculum_grade"],
+                                    skill=row["skill"],
+                                    level=row["level"],
+                                    num_questions=num_q,
+                                    rag_context=rag_context,
+                                )
+
+                                worksheet_body, answer_key = split_worksheet_and_answer(full_text)
+
+                                ws_pdf = text_to_pdf(
+                                    title=f"Worksheet for {row['student_name']}",
+                                    content=worksheet_body,
+                                )
+                                ak_pdf = text_to_pdf(
+                                    title=f"Answer Key for {row['student_name']}",
+                                    content=answer_key,
+                                )
+
+                                st.markdown(f"#### {row['student_name']}")
+                                c1, c2 = st.columns(2)
+                                with c1:
                                     st.download_button(
-                                        label="🗝️ Download answer key (PDF)",
-                                        data=ak_pdf,
-                                        file_name=f"answer_key_{student_id}_{student_name}_{skill}.pdf",
+                                        label="Download worksheet PDF",
+                                        data=ws_pdf,
+                                        file_name=f"worksheet_{row['student_name']}.pdf",
                                         mime="application/pdf",
-                                        key=f"ak_{idx}",
+                                    )
+                                with c2:
+                                    st.download_button(
+                                        label="Download answer key PDF",
+                                        data=ak_pdf,
+                                        file_name=f"answer_key_{row['student_name']}.pdf",
+                                        mime="application/pdf",
                                     )
 
-                    st.success("Worksheet generation finished.")
-            st.markdown("</div>", unsafe_allow_html=True)
+                            st.success("All PDFs generated successfully ✅")
+                        except Exception as e:
+                            st.error(f"Error while generating worksheets: {e}")
 
-    # ----------------- HELP & TOOLS -----------------
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    # -------- HELP TAB --------
     with tab_help:
-        st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.markdown('<div class="step-title">Help & tools</div>', unsafe_allow_html=True)
         st.markdown(
             """
-            <p class="step-help">
-            This tab documents the main tools and concepts used in the prototype:
-            </p>
-            <ul>
-              <li><b>Pandas</b> – reshaping the thesis dataset into long format and computing score bands.</li>
-              <li><b>Rule-based mapping</b> – applying your scoring rule to decide the target curriculum grade.</li>
-              <li><b>RAG (Retrieval-Augmented Generation)</b> – optional curriculum bank stored in
-                  <code>curriculum_bank.csv</code> to guide GPT with real objectives and examples.</li>
-              <li><b>GPT-4o-mini</b> – generating exam-style content that mirrors the official mid-term templates
-                  for Reading, Grammar, Vocabulary, Language Functions, and Writing.</li>
-              <li><b>ReportLab</b> – exporting the generated worksheets and answer keys as downloadable PDFs.</li>
-            </ul>
+            <div class="card">
+                <div class="step-title">Help & implementation notes</div>
+                <p class="step-help">
+                    This tab summarises the main tools used in the prototype:
+                </p>
+                <ul class="step-help">
+                    <li><b>Pandas</b> — reading the CSV file, reshaping the thesis dataset into long format, and classifying students.</li>
+                    <li><b>Rule-based classifier</b> — fixed thresholds (Low / Medium / High) mapped to curriculum grades for differentiation.</li>
+                    <li><b>RAG</b> — a small curriculum bank CSV is used as a retrieval layer to give GPT concrete topics, objectives, and examples.</li>
+                    <li><b>GPT API</b> — generates passages, questions, and answer keys aligned with the skill and curriculum grade.</li>
+                    <li><b>PDF export</b> — the final worksheets and answer keys are exported as A4 PDFs so the teacher can download and print them.</li>
+                </ul>
+            </div>
             """,
             unsafe_allow_html=True,
         )
-        st.markdown("</div>", unsafe_allow_html=True)
 
 
 if __name__ == "__main__":
