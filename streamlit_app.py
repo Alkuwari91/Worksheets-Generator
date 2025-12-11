@@ -26,16 +26,17 @@ def get_api_key() -> str:
 
 def classify_level(score: float) -> str:
     """
-    Simple fixed thresholds based on thesis idea:
-    Low:    < 50
-    Medium: 50–74
-    High:   >= 75
+    Classification based on the actual test out of 25:
+    - High   : > 23
+    - Medium : 15–22
+    - Low    : < 15
     """
-    if score < 50:
-        return "Low"
-    elif score < 75:
+    if score > 23:
+        return "High"
+    elif score >= 15:
         return "Medium"
-    return "High"
+    return "Low"
+
 
 
 def transform_thesis_format(df: pd.DataFrame) -> pd.DataFrame:
