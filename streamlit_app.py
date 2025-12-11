@@ -225,7 +225,7 @@ Additional instructions about the skill:
 
 Task:
 1. Write a short reading passage (80–120 words) appropriate for the target grade.
-2. The passage and questions must clearly practise the given skill.
+2. The passage and ALL questions must clearly and explicitly practise the given SKILL described above. Do NOT mix other skills.
 3. Create {num_questions} multiple-choice questions (A–D).
 4. Provide an answer key clearly.
 
