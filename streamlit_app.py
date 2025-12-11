@@ -37,6 +37,23 @@ def classify_level(score: float) -> str:
         return "Medium"
     return "Low"
 
+def score_to_curriculum_grade(score: float) -> int:
+    """
+    Map raw score (out of 25) to target curriculum grade:
+    - > 23       → Grade 6
+    - 15–22      → Grade 5
+    - 10–14      → Grade 4
+    - < 10       → Grade 3
+    يمكنك تعديل حدود 10 / 14 لاحقًا حسب رؤيتك.
+    """
+    if score > 23:
+        return 6
+    elif score >= 15:
+        return 5
+    elif score >= 10:
+        return 4
+    else:
+        return 3
 
 
 def transform_thesis_format(df: pd.DataFrame) -> pd.DataFrame:
@@ -636,13 +653,14 @@ def main():
                 st.error("Please upload the student performance CSV first.")
             else:
                 try:
-                    df_proc = transform_thesis_format(df_raw_state)
-                    df_proc["level"] = df_proc["score"].apply(classify_level)
-                    # Map performance to curriculum grade:
-                    # Low -> 3, Medium -> 5, High -> 6 (example mapping)
-                    df_proc["target_curriculum_grade"] = df_proc["level"].map(
-                        {"Low": 3, "Medium": 5, "High": 6}
-                    )
+          df_proc = transform_thesis_format(df_raw_state)
+
+# 1) مستوى الأداء بناءً على الدرجة من 25
+df_proc["level"] = df_proc["score"].apply(classify_level)
+
+# 2) المنهج المستهدف بناءً على الدرجة مباشرة
+df_proc["target_curriculum_grade"] = df_proc["score"].apply(score_to_curriculum_grade)
+
                     st.session_state["processed_df"] = df_proc
 
                     st.success("Student data processed successfully ✔")
