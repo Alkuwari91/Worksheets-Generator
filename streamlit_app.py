@@ -1,17 +1,14 @@
 import os
 import io
-
 import pandas as pd
 import streamlit as st
 from openai import OpenAI
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 
-
 # ==============================
 # Helper functions
 # ==============================
-
 
 def get_api_key() -> str:
     """Get OpenAI API key from environment or Streamlit secrets."""
@@ -26,34 +23,16 @@ def get_api_key() -> str:
 
 def classify_level(score: float) -> str:
     """
-    Classification based on the actual test out of 25:
-    - High   : > 23
-    - Medium : 15–22
-    - Low    : < 15
+    Simple fixed thresholds based on thesis idea:
+    Low:    < 50
+    Medium: 50–74
+    High:   >= 75
     """
-    if score > 23:
-        return "High"
-    elif score >= 15:
+    if score < 50:
+        return "Low"
+    elif score < 75:
         return "Medium"
-    return "Low"
-
-def score_to_curriculum_grade(score: float) -> int:
-    """
-    Map raw score (out of 25) to target curriculum grade:
-    - > 23       → Grade 6
-    - 15–22      → Grade 5
-    - 10–14      → Grade 4
-    - < 10       → Grade 3
-    يمكنك تعديل حدود 10 / 14 لاحقًا حسب رؤيتك.
-    """
-    if score > 23:
-        return 6
-    elif score >= 15:
-        return 5
-    elif score >= 10:
-        return 4
-    else:
-        return 3
+    return "High"
 
 
 def transform_thesis_format(df: pd.DataFrame) -> pd.DataFrame:
@@ -90,49 +69,31 @@ def transform_thesis_format(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def build_skill_instruction(skill: str) -> str:
-    """Return detailed instructions depending on the skill name."""
+    """Return extra instructions depending on the skill name."""
     s = str(skill).lower()
-
     if "grammar" in s:
         return (
-            "The worksheet must explicitly assess GRAMMAR. "
-            "Use multiple-choice questions that focus on: verb tenses, subject–verb agreement, "
-            "prepositions, articles, comparative/superlative forms, and sentence structure. "
-            "Use short sentences similar to those in the Qatari English tests. "
-            "DO NOT ask general reading questions here; every question must check a grammar rule."
+            "Focus the questions on grammar usage, sentence structure, verb tenses, "
+            "and error-correction style MCQs, appropriate for the target grade."
         )
-
     if "reading" in s:
         return (
-            "The worksheet must explicitly assess READING COMPREHENSION. "
-            "Write one short passage and then create questions about: main idea, supporting details, "
-            "true/false, inference, and vocabulary in context. "
-            "Questions should follow the style of school tests: 'What is the main idea of the text?', "
-            "'Why does ...?', 'The underlined word means ...'. "
-            "Do NOT test grammar rules here unless they are part of understanding the text."
+            "Focus the questions on reading comprehension: main idea, details, "
+            "inference, and vocabulary in context related to the passage."
         )
-
     if "writing" in s:
         return (
-            'The worksheet must explicitly assess WRITING. '
-            "Focus on sentence and short-paragraph level tasks, for example: choosing the best topic sentence, "
-            "ordering jumbled sentences to form a paragraph, completing a sentence with a suitable connector, "
-            "or choosing the sentence with correct punctuation and capitalisation. "
-            "Questions are still MCQ (A–D) but always about how to write better sentences."
+            "Focus the questions on writing skills: organising ideas, choosing "
+            "correct connectors, and building clear sentences."
         )
-
     if "languagefunction" in s or "language function" in s:
         return (
-            "The worksheet must explicitly assess LANGUAGE FUNCTIONS. "
-            "Each question should present a short situation or dialogue, and the student chooses the best "
-            "response or expression (e.g. making requests, giving advice, inviting, apologising, agreeing, "
-            "disagreeing, asking for information). "
-            "Use prompts like: 'What would you say?', 'Choose the correct reply', "
-            "and short dialogues with a missing line."
+            "Focus the questions on language functions such as making requests, "
+            "giving advice, asking for information, agreeing and disagreeing, etc."
         )
-
     return (
-        "Make sure all questions clearly practise the given skill in an age-appropriate way."
+        "Make sure the questions clearly practise the given skill in an "
+        "age-appropriate way."
     )
 
 
@@ -208,7 +169,6 @@ Curriculum RAG context (reference material from the official curriculum bank):
 
 Use this information to align the passage topic, vocabulary, and question focus
 with the curriculum expectations for this grade and skill.
-
 """
 
     user_prompt = f"""
@@ -225,7 +185,7 @@ Additional instructions about the skill:
 
 Task:
 1. Write a short reading passage (80–120 words) appropriate for the target grade.
-2. The passage and ALL questions must clearly and explicitly practise the given SKILL described above. Do NOT mix other skills.
+2. The passage and questions must clearly practise the given skill.
 3. Create {num_questions} multiple-choice questions (A–D).
 4. Provide an answer key clearly.
 
@@ -315,94 +275,47 @@ def text_to_pdf(title: str, content: str) -> bytes:
 
 
 # ==============================
-# Custom CSS (professional UI)
+# Custom CSS (nice UI)
 # ==============================
 
 CUSTOM_CSS = """
 <style>
 
-/* Hide Streamlit default header/footer */
+/* Hide Streamlit default header */
 header, footer {visibility: hidden;}
 
 /* Global app styles */
 body, .stApp {
-    background: #f6f7fb;
+    background: #f4f5f7;
     font-family: "Cairo", sans-serif;
-    color: #111827;
+    color: #1f2937;
 }
 
-/* =============================
-   TOP NAVBAR (HEADER)
-   ============================= */
-.navbar {
-    position: sticky;
-    top: 0;
-    z-index: 999;
+/* HEADER */
+.app-header {
     width: 100%;
-    background: #ffffff;
-    border-bottom: 1px solid #e5e7eb;
-    padding: 0.9rem 2.2rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+    padding: 1.6rem 2rem;
+    background: linear-gradient(135deg, #8A1538, #5e0d24);
+    border-radius: 0 0 20px 20px;
+    color: #ffffff;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.20);
 }
 
-.nav-left {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
-.nav-logo {
-    font-size: 1.35rem;
+.header-title {
+    font-size: 2.2rem;
     font-weight: 800;
     letter-spacing: .3px;
-    color: #8A1538;
 }
 
-.nav-subtitle {
-    font-size: .85rem;
-    color: #6b7280;
+.header-sub {
+    font-size: 1rem;
+    opacity: .95;
 }
 
-/* RIGHT SIDE BUTTONS */
-.nav-right {
-    display: flex;
-    gap: 0.6rem;
-    align-items: center;
-}
-
-.nav-btn {
-    padding: 0.4rem 1.1rem;
-    border-radius: 999px;
-    font-size: .8rem;
-    font-weight: 600;
-    border: 1px solid #8A1538;
-    background: #ffffff;
-    color: #8A1538;
-    cursor: pointer;
-}
-
-.nav-btn:hover {
-    background: #fdf2f6;
-}
-
-.nav-btn-primary {
-    background: #8A1538;
-    color: #ffffff;
-    border: none;
-}
-
-.nav-btn-primary:hover {
-    background: #6e0f2c;
-}
-
-/* =============================
-   TABS
-   ============================= */
+/* TABS */
 .stTabs {
-    margin-top: 1.0rem;
+    margin-top: .5rem;
     margin-bottom: 1.2rem;
 }
 
@@ -411,16 +324,16 @@ body, .stApp {
 }
 
 .stTabs [data-baseweb="tab"] {
-    background: #e5e7eb;
+    background: #e8eaf0;
     color: #4b5563;
     border-radius: 999px;
-    padding: .4rem 1.3rem;
+    padding: .45rem 1.3rem;
     font-size: .9rem;
     border: none;
 }
 
 .stTabs [data-baseweb="tab"]:hover {
-    background: #d1d5db;
+    background: #d5d7df;
     color: #111827;
 }
 
@@ -431,31 +344,28 @@ body, .stApp {
     box-shadow: 0 4px 12px rgba(139, 20, 54, 0.35);
 }
 
-/* =============================
-   CARDS
-   ============================= */
+/* CARDS */
 .card {
-    background: #ffffff;
+    background: white;
     padding: 1.5rem 1.7rem;
     border-radius: 16px;
     margin-bottom: 1.2rem;
     border: 1px solid #e5e7eb;
-    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.06);
 }
 
 .step-title {
     color: #8A1538;
-    font-size: 1.25rem;
+    font-size: 1.3rem;
     font-weight: 700;
-    margin-bottom: .25rem;
 }
 
 .step-help {
-    color: #4b5563;
+    color: #555;
     font-size: .95rem;
 }
 
-/* Tool tags */
+/* TOOL TAGS */
 .tool-tag {
     display: inline-block;
     background: #fde7f0;
@@ -467,10 +377,10 @@ body, .stApp {
     margin-right: 4px;
 }
 
-/* Buttons */
+/* BUTTONS */
 .stButton > button {
     background: linear-gradient(135deg, #8A1538, #b11b49);
-    color: #ffffff;
+    color: white;
     border-radius: 999px;
     border: none;
     padding: .5rem 1.4rem;
@@ -485,7 +395,7 @@ body, .stApp {
 
 /* Download button */
 .stDownloadButton > button {
-    background: #ffffff;
+    background: white;
     color: #374151;
     border: 1px solid #d1d5db;
     border-radius: 999px;
@@ -494,11 +404,11 @@ body, .stApp {
 }
 
 .stDownloadButton > button:hover {
-    background: #f3f4ff;
+    background: #f3eeff;
     border-color: #c4c7ff;
 }
 
-/* Code style */
+/* CODE STYLE */
 .stMarkdown code, code {
     background: #fde7f0;
     color: #8A1538;
@@ -508,9 +418,9 @@ body, .stApp {
     font-size: .85rem;
 }
 
-/* Dataframe / text color fix */
+/* DATAFRAME / TEXT */
 .stDataFrame, .stMarkdown, .stText {
-    color: #111827 !important;
+    color: #1f2937 !important;
 }
 
 </style>
@@ -520,6 +430,7 @@ body, .stApp {
 # ==============================
 # Streamlit App
 # ==============================
+
 def main():
     st.set_page_config(
         page_title="English Worksheets Generator",
@@ -527,29 +438,22 @@ def main():
         initial_sidebar_state="collapsed",
     )
 
-    # Apply global CSS
     st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
-    # ---------------- TOP NAVBAR (UI only) ----------------
+    # HEADER
     st.markdown(
         """
-        <div class="navbar">
-            <div class="nav-left">
-                <div class="nav-logo">English Worksheets Generator</div>
-                <div class="nav-subtitle">
-                    Adaptive English worksheets aligned with the Qatari curriculum
-                </div>
-            </div>
-            <div class="nav-right">
-                <button class="nav-btn">Sign in</button>
-                <button class="nav-btn nav-btn-primary">Sign up</button>
+        <div class="app-header">
+            <div class="header-title">English Worksheets Generator</div>
+            <div class="header-sub">
+                Prototype for adaptive remedial worksheets using Pandas + RAG + GPT API
             </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    # ---------------- API KEY ----------------
+    # API KEY
     api_key = get_api_key()
     if not api_key:
         st.error("OPENAI_API_KEY is missing. Add it in Settings → Secrets.")
@@ -557,7 +461,7 @@ def main():
 
     client = OpenAI(api_key=api_key)
 
-    # ---------------- SESSION STATE ----------------
+    # Session state
     if "df_raw" not in st.session_state:
         st.session_state["df_raw"] = None
     if "processed_df" not in st.session_state:
@@ -565,12 +469,12 @@ def main():
     if "curriculum_df" not in st.session_state:
         st.session_state["curriculum_df"] = None
 
-    # ---------------- TABS ----------------
+    # Tabs
     tab_overview, tab_data, tab_generate, tab_help = st.tabs(
         ["Overview", "Data & RAG", "Generate Worksheets", "Help & Tools"]
     )
 
-    # ========== OVERVIEW TAB ==========
+    # -------- OVERVIEW TAB --------
     with tab_overview:
         st.markdown(
             """
@@ -588,14 +492,26 @@ def main():
             """,
             unsafe_allow_html=True,
         )
+
     # -------- DATA & RAG TAB --------
     with tab_data:
-
-        # STEP 1 — upload CSV
+        # STEP 1: upload students CSV
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.markdown('<div class="step-title">Step 1 — Upload student performance CSV</div>', unsafe_allow_html=True)
+        st.markdown(
+            """
+            <span class="tool-tag">Pandas</span>
+            <span class="tool-tag">Data validation</span>
+            <p class="step-help">
+            Expected format (from thesis dataset):
+            <code>StudentNumber, StudentName, LanguageFunction, ReadingComprehension, Grammar, Writing</code>
+            </p>
+            """,
+            unsafe_allow_html=True,
+        )
 
         uploaded = st.file_uploader("Upload Students.csv", type=["csv"])
+
         if uploaded is not None:
             try:
                 df_raw = pd.read_csv(uploaded)
@@ -607,11 +523,26 @@ def main():
 
         st.markdown("</div>", unsafe_allow_html=True)
 
-        # STEP 2 — Curriculum RAG
+        # STEP 2: curriculum bank (RAG)
         st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.markdown('<div class="step-title">Step 2 — Curriculum bank (RAG)</div>', unsafe_allow_html=True)
+        st.markdown('<div class="step-title">Step 2 — Curriculum bank for RAG (optional)</div>', unsafe_allow_html=True)
+        st.markdown(
+            """
+            <span class="tool-tag">RAG</span>
+            <span class="tool-tag">Curriculum bank</span>
+            <p class="step-help">
+            Upload a small CSV with at least columns <code>grade</code> and <code>skill</code>,
+            plus any descriptive fields (objective, topic, example, etc.).
+            The app will retrieve rows matching the target grade and skill and inject them into the GPT prompt.
+            </p>
+            """,
+            unsafe_allow_html=True,
+        )
 
-        curriculum_file = st.file_uploader("Upload curriculum CSV (optional)", type=["csv"], key="curriculum_csv")
+        curriculum_file = st.file_uploader(
+            "Upload curriculum bank CSV (optional)", type=["csv"], key="curriculum_csv"
+        )
+
         if curriculum_file is not None:
             try:
                 cur_df = pd.read_csv(curriculum_file)
@@ -623,9 +554,19 @@ def main():
 
         st.markdown("</div>", unsafe_allow_html=True)
 
-        # STEP 3 — Process Data
+        # STEP 3: process and classify
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.markdown('<div class="step-title">Step 3 — Process data & classify levels</div>', unsafe_allow_html=True)
+        st.markdown(
+            """
+            <span class="tool-tag">Rule-based classifier</span>
+            <p class="step-help">
+            This step automatically analyzes student scores and assigns performance levels
+            (Low / Medium / High) based on fixed thresholds used in the thesis methodology.
+            </p>
+            """,
+            unsafe_allow_html=True,
+        )
 
         if st.button("Process student data"):
             df_raw_state = st.session_state.get("df_raw", None)
@@ -635,12 +576,25 @@ def main():
                 try:
                     df_proc = transform_thesis_format(df_raw_state)
                     df_proc["level"] = df_proc["score"].apply(classify_level)
-                    df_proc["target_curriculum_grade"] = df_proc["score"].apply(score_to_curriculum_grade)
-
+                    # Map performance to curriculum grade:
+                    # Low -> 3, Medium -> 5, High -> 6 (example mapping)
+                    df_proc["target_curriculum_grade"] = df_proc["level"].map(
+                        {"Low": 3, "Medium": 5, "High": 6}
+                    )
                     st.session_state["processed_df"] = df_proc
-                    st.success("Student data processed successfully ✓")
-                    st.dataframe(df_proc, use_container_width=True)
 
+                    st.success("Student data processed successfully ✔")
+
+                    counts = df_proc["level"].value_counts()
+                    st.markdown("**Classification summary:**")
+                    st.markdown(
+                        f"- Low: {counts.get('Low', 0)} students  \n"
+                        f"- Medium: {counts.get('Medium', 0)} students  \n"
+                        f"- High: {counts.get('High', 0)} students"
+                    )
+
+                    st.write("Processed data preview:")
+                    st.dataframe(df_proc.head(), use_container_width=True)
                 except Exception as e:
                     st.error(f"Error while processing data: {e}")
 
@@ -650,86 +604,94 @@ def main():
     with tab_generate:
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.markdown('<div class="step-title">Step 4 — Generate worksheets (PDF only)</div>', unsafe_allow_html=True)
+        st.markdown(
+            """
+            <span class="tool-tag">GPT API</span>
+            <span class="tool-tag">RAG</span>
+            <span class="tool-tag">PDF export</span>
+            <p class="step-help">
+            For each student in the selected skill and level, the system generates a personalised worksheet
+            and a separate answer key. Only download buttons are shown (no raw text on screen).
+            </p>
+            """,
+            unsafe_allow_html=True,
+        )
 
         df = st.session_state.get("processed_df", None)
         curriculum_df = st.session_state.get("curriculum_df", None)
 
         if df is None:
-            st.info("Please process the student data first.")
+            st.info("Please go to the 'Data & RAG' tab and process the student data first.")
         else:
             skills = sorted(df["skill"].unique())
             selected_skill = st.selectbox("Choose skill", skills)
+
             levels = ["Low", "Medium", "High"]
             selected_level = st.selectbox("Choose performance level", levels)
-            num_q = st.slider("Number of questions", 3, 10, 5)
+
+            num_q = st.slider("Number of questions per worksheet", 3, 10, 5)
 
             target_df = df[(df["skill"] == selected_skill) & (df["level"] == selected_level)]
+
             st.markdown(f"Students in this group: **{len(target_df)}**")
 
-    #     ...
-    #
-    # with tab_help:
-    #     ...
+            if st.button("Generate PDFs for this group"):
+                if target_df.empty:
+                    st.error("No students match this skill + level.")
+                else:
+                    with st.spinner("Generating worksheets and answer keys…"):
+                        try:
+                            for _, row in target_df.iterrows():
+                                rag_context = build_rag_context(
+                                    curriculum_df,
+                                    skill=row["skill"],
+                                    curriculum_grade=row["target_curriculum_grade"],
+                                )
 
-    # -------- GENERATE WORKSHEETS TAB --------
-# -------- STEP 4: Generate worksheets (PDF only) --------
-    with tab_generate:
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.markdown('<div class="step-title">Step 4 — Generate worksheets (PDF only)</div>', unsafe_allow_html=True)
-    st.markdown("""
-    <p class="step-help">
-    For each student in the selected skill and level, the system generates a personalised worksheet
-    and a separate answer key. Only PDF download buttons are shown.
-    </p>
-    """, unsafe_allow_html=True)
+                                full_text = generate_worksheet(
+                                    client=client,
+                                    student_name=row["student_name"],
+                                    student_grade=row["grade"] if "grade" in row else 5,
+                                    curriculum_grade=row["target_curriculum_grade"],
+                                    skill=row["skill"],
+                                    level=row["level"],
+                                    num_questions=num_q,
+                                    rag_context=rag_context,
+                                )
 
-    # Choose skill
-    skill = st.selectbox(
-        "Choose skill",
-        ["LanguageFunction", "ReadingComprehension", "Grammar", "Writing"]
-    )
+                                worksheet_body, answer_key = split_worksheet_and_answer(full_text)
 
-    # Choose performance level
-    selected_level = st.selectbox("Choose performance level", ["Low", "Medium", "High"])
+                                ws_pdf = text_to_pdf(
+                                    title=f"Worksheet for {row['student_name']}",
+                                    content=worksheet_body,
+                                )
+                                ak_pdf = text_to_pdf(
+                                    title=f"Answer Key for {row['student_name']}",
+                                    content=answer_key,
+                                )
 
-    processed_df = st.session_state.get("processed_df", None)
+                                st.markdown(f"#### {row['student_name']}")
+                                c1, c2 = st.columns(2)
+                                with c1:
+                                    st.download_button(
+                                        label="Download worksheet PDF",
+                                        data=ws_pdf,
+                                        file_name=f"worksheet_{row['student_name']}.pdf",
+                                        mime="application/pdf",
+                                    )
+                                with c2:
+                                    st.download_button(
+                                        label="Download answer key PDF",
+                                        data=ak_pdf,
+                                        file_name=f"answer_key_{row['student_name']}.pdf",
+                                        mime="application/pdf",
+                                    )
 
-    if processed_df is None:
-        st.warning("Please process the student data in Step 3 before generating worksheets.")
-    else:
-        group_df = processed_df[processed_df["level"] == selected_level]
+                            st.success("All PDFs generated successfully ✅")
+                        except Exception as e:
+                            st.error(f"Error while generating worksheets: {e}")
 
-        st.write(f"Students in this group: **{len(group_df)}**")
-
-        # Generate PDFs
-        if st.button("Generate PDFs for this group"):
-            if len(group_df) == 0:
-                st.warning("There are no students in this category.")
-            else:
-                with st.spinner("Generating personalised PDF worksheets…"):
-                    pdf_results = generate_pdfs_for_group(group_df, skill)
-
-                st.success("PDF worksheets are ready!")
-
-                for item in pdf_results:
-                    col1, col2 = st.columns(2)
-
-                    with col1:
-                        st.download_button(
-                            label=f"Download Worksheet — {item['name']}",
-                            data=item["worksheet"],
-                            file_name=f"{item['name']}_worksheet.pdf",
-                            mime="application/pdf"
-                        )
-                    with col2:
-                        st.download_button(
-                            label=f"Download Answer Key — {item['name']}",
-                            data=item["answer_key"],
-                            file_name=f"{item['name']}_answers.pdf",
-                            mime="application/pdf"
-                        )
-
-    st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
     # -------- HELP TAB --------
     with tab_help:
