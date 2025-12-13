@@ -23,16 +23,20 @@ def get_api_key() -> str:
 
 def classify_level(score: float) -> str:
     """
-    Simple fixed thresholds based on thesis idea:
-    Low:    < 50
-    Medium: 50–74
-    High:   >= 75
+    Custom thresholds requested by Marwa:
+    Low:    0–11
+    Medium: 12–21
+    High:   22–25
     """
-    if score < 50:
+    if score <= 11:
         return "Low"
-    elif score < 75:
+    elif score <= 21:
         return "Medium"
-    return "High"
+    elif score <= 25:
+        return "High"
+    else:
+        return "Unknown"   # إذا الدرجة خارج النطاق
+
 
 
 def transform_thesis_format(df: pd.DataFrame) -> pd.DataFrame:
