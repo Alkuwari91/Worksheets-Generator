@@ -5,10 +5,11 @@ import streamlit as st
 from openai import OpenAI
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
+from PyPDF2 import PdfReader   # لقراءة ملفات الـ PDF
 
-# ==============================
-# Helper functions
-# ==============================
+# =====================================================
+# 1. Helpers: API key
+# =====================================================
 
 def get_api_key() -> str:
     """Get OpenAI API key from environment or Streamlit secrets."""
@@ -20,6 +21,9 @@ def get_api_key() -> str:
             key = None
     return key
 
+# =====================================================
+# 2. Classification helpers
+# =====================================================
 
 def classify_level(score: float) -> str:
     """
@@ -35,7 +39,7 @@ def classify_level(score: float) -> str:
     elif score <= 25:
         return "High"
     else:
-        return "Unknown"   # درجات خارج النطاق المتوقع
+        return "Unknown"
 
 
 def transform_thesis_format(df: pd.DataFrame) -> pd.DataFrame:
@@ -51,7 +55,6 @@ def transform_thesis_format(df: pd.DataFrame) -> pd.DataFrame:
         "Grammar", "Writing"
     }
 
-    # إذا كان الملف بنفس تنسيق الرسالة
     if thesis_cols.issubset(df.columns):
         df_long = df.melt(
             id_vars=["StudentNumber", "StudentName"],
@@ -72,9 +75,90 @@ def transform_thesis_format(df: pd.DataFrame) -> pd.DataFrame:
     # If already in long format, just return as is
     return df
 
+# =====================================================
+# 3. RAG helpers: load curriculum & textbooks from PDF
+# =====================================================
+
+def load_pdf_text(pdf_path: str) -> str:
+    """Read all text from a PDF (simple extract)."""
+    if not os.path.exists(pdf_path):
+        return ""
+    try:
+        reader = PdfReader(pdf_path)
+        text = ""
+        for page in reader.pages:
+            page_text = page.extract_text()
+            if page_text:
+                text += page_text + "\n"
+        return text
+    except Exception:
+        return ""
+
+
+def build_curriculum_memory() -> dict:
+    """
+    Load curriculum standards PDFs for grades 3–6.
+    Keys are numeric grades: 3, 4, 5, 6.
+    """
+    return {
+        3: load_pdf_text("Grade 3 Curriculum Standards.pdf"),
+        4: load_pdf_text("Grade 4 Curriculum Standards.pdf"),
+        5: load_pdf_text("Grade 5 Curriculum Standards.pdf"),
+        6: load_pdf_text("Grade 6 Curriculum Standards.pdf"),
+    }
+
+
+def build_textbook_memory() -> dict:
+    """
+    Load Top Stars textbooks PDFs for grades 3–6.
+    """
+    return {
+        3: load_pdf_text("TopStars_3A_QTR_21-22_SB_001-088_LOW.pdf"),
+        4: load_pdf_text("TopStars_4A_ed21-22_SB.pdf"),
+        5: load_pdf_text("Top Stars_5A_SB.pdf"),
+        6: load_pdf_text("TopStars_6A_QTR_2021-2022_TB_001-160_LOW.pdf"),
+    }
+
+
+def build_rag_context(grade: int, skill: str,
+                      curriculum_memory: dict,
+                      textbook_memory: dict) -> str:
+    """
+    Build a simple RAG context using:
+    - Curriculum standards PDF for this grade.
+    - Top Stars textbook PDF for this grade.
+
+    We don't have structured tagging inside the PDFs,
+    so we provide short excerpts plus the skill label
+    and let GPT align the content.
+    """
+    cur_text = curriculum_memory.get(grade, "") or ""
+    book_text = textbook_memory.get(grade, "") or ""
+
+    if not cur_text and not book_text:
+        return ""
+
+    # نحدّ من عدد الحروف حتى لا يكون الـ prompt طويل جدًا
+    cur_excerpt = cur_text[:2000]
+    book_excerpt = book_text[:2000]
+
+    return f"""
+Curriculum standards excerpt for Grade {grade} (raw text from official PDF).
+Focus on parts related to the skill: {skill}.
+
+{cur_excerpt}
+
+Textbook excerpt (Top Stars) for Grade {grade}.
+Use topics, vocabulary, and task styles that fit this grade and skill.
+
+{book_excerpt}
+"""
+
+# =====================================================
+# 4. Worksheet generation helpers
+# =====================================================
 
 def build_skill_instruction(skill: str) -> str:
-    """Return extra instructions depending on the skill name."""
     s = str(skill).lower()
     if "grammar" in s:
         return (
@@ -102,49 +186,6 @@ def build_skill_instruction(skill: str) -> str:
     )
 
 
-def build_rag_context(curriculum_df: pd.DataFrame, skill: str, curriculum_grade: int) -> str:
-    """
-    Very simple RAG: filter curriculum bank by grade & skill and
-    convert rows into short bullet points.
-    Expected columns: grade, skill, plus any other descriptive columns.
-    """
-    if curriculum_df is None:
-        return ""
-
-    required_cols = {"grade", "skill"}
-    if not required_cols.issubset(curriculum_df.columns):
-        return ""
-
-    try:
-        temp = curriculum_df.copy()
-        temp["grade_str"] = temp["grade"].astype(str)
-        mask = (
-            (temp["grade_str"] == str(curriculum_grade)) &
-            (temp["skill"].astype(str).str.lower() == str(skill).lower())
-        )
-        subset = temp[mask]
-        if subset.empty:
-            return ""
-
-        bullets = []
-        for _, row in subset.iterrows():
-            row_dict = row.to_dict()
-            row_dict.pop("grade_str", None)
-            g = row_dict.pop("grade", None)
-            sk = row_dict.pop("skill", None)
-            # Keep other fields as description
-            rest = " | ".join(
-                f"{k}: {v}"
-                for k, v in row_dict.items()
-                if pd.notna(v)
-            )
-            bullets.append(f"- Grade {g}, Skill {sk}: {rest}")
-
-        return "\n".join(bullets[:8])  # limit context
-    except Exception:
-        return ""
-
-
 def generate_worksheet(
     client: OpenAI,
     student_name: str,
@@ -152,10 +193,10 @@ def generate_worksheet(
     curriculum_grade: int,
     skill: str,
     level: str,
-    num_questions: int = 5,
-    rag_context: str = ""
+    num_questions: int,
+    rag_context: str,
 ) -> str:
-    """Generate worksheet using GPT based on mapped curriculum grade, skill, and RAG context."""
+    """Generate worksheet using GPT based on grade, skill, level and RAG context."""
 
     skill_instruction = build_skill_instruction(skill)
 
@@ -169,11 +210,11 @@ def generate_worksheet(
     rag_section = ""
     if rag_context:
         rag_section = f"""
-Curriculum RAG context (reference material from the official curriculum bank):
-{rag_context}
+Curriculum-aligned standards and textbook excerpts for this grade and skill:
+Use the following teaching standards, objectives, topics, and examples when generating the passage and questions.
+Ensure that ALL worksheet content aligns with these curriculum requirements:
 
-Use this information to align the passage topic, vocabulary, and question focus
-with the curriculum expectations for this grade and skill.
+{rag_context}
 """
 
     user_prompt = f"""
@@ -240,7 +281,6 @@ def split_worksheet_and_answer(text: str):
 def text_to_pdf(title: str, content: str) -> bytes:
     """
     Convert text to a simple A4 PDF (in memory).
-    Returns the PDF as bytes so it can be downloaded in Streamlit.
     """
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
@@ -278,17 +318,14 @@ def text_to_pdf(title: str, content: str) -> bytes:
     buffer.close()
     return pdf_bytes
 
-
-# ==============================
-# Custom CSS (nice UI)
-# ==============================
+# =====================================================
+# 5. UI CSS
+# =====================================================
 
 CUSTOM_CSS = """
 <style>
-/* Hide Streamlit default header */
 header, footer {visibility: hidden;}
 
-/* Global app styles */
 body, .stApp {
     background: #f4f5f7;
     font-family: "Cairo", sans-serif;
@@ -419,10 +456,9 @@ body, .stApp {
 </style>
 """
 
-
-# ==============================
-# Streamlit App
-# ==============================
+# =====================================================
+# 6. Streamlit App
+# =====================================================
 
 def main():
     st.set_page_config(
@@ -451,7 +487,6 @@ def main():
     if not api_key:
         st.error("OPENAI_API_KEY is missing. Add it in Settings → Secrets.")
         return
-
     client = OpenAI(api_key=api_key)
 
     # Session state
@@ -459,8 +494,13 @@ def main():
         st.session_state["df_raw"] = None
     if "processed_df" not in st.session_state:
         st.session_state["processed_df"] = None
-    if "curriculum_df" not in st.session_state:
-        st.session_state["curriculum_df"] = None
+    if "curriculum_memory" not in st.session_state:
+        st.session_state["curriculum_memory"] = build_curriculum_memory()
+    if "textbook_memory" not in st.session_state:
+        st.session_state["textbook_memory"] = build_textbook_memory()
+
+    curriculum_memory = st.session_state["curriculum_memory"]
+    textbook_memory = st.session_state["textbook_memory"]
 
     # Tabs
     tab_overview, tab_data, tab_generate, tab_help = st.tabs(
@@ -478,7 +518,7 @@ def main():
                 </p>
                 <ol class="step-help">
                   <li><b>Upload & process student performance data</b> (Pandas) to classify students into Low / Medium / High for each skill.</li>
-                  <li><b>Attach curriculum knowledge</b> via a small curriculum bank CSV. This is used as a simple <b>RAG</b> layer to ground GPT in real topics.</li>
+                  <li><b>Attach curriculum knowledge</b> via Qatar National Curriculum standards and Top Stars textbooks (Grades 3–6) using a simple <b>RAG</b> layer.</li>
                   <li><b>Generate personalised worksheets</b> for each student using the GPT API, aligned with the selected skill and curriculum grade.</li>
                 </ol>
             </div>
@@ -515,34 +555,26 @@ def main():
 
         st.markdown("</div>", unsafe_allow_html=True)
 
-        # STEP 2: curriculum bank (RAG)
+        # STEP 2: Curriculum & textbooks RAG status
         st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.markdown('<div class="step-title">Step 2 — Curriculum bank for RAG (optional)</div>', unsafe_allow_html=True)
+        st.markdown('<div class="step-title">Step 2 — Curriculum standards & Top Stars (RAG)</div>', unsafe_allow_html=True)
         st.markdown(
             """
             <span class="tool-tag">RAG</span>
-            <span class="tool-tag">Curriculum bank</span>
             <p class="step-help">
-            Upload a small CSV with at least columns <code>grade</code> and <code>skill</code>,
-            plus any descriptive fields (objective, topic, example, etc.).
-            The app will retrieve rows matching the target grade and skill and inject them into the GPT prompt.
+            The app automatically loads Qatar National Curriculum standards and Top Stars textbooks
+            for Grades 3–6 from local PDF files. These texts are used as a retrieval context
+            when generating worksheets, so the content stays aligned with the real curriculum.
             </p>
             """,
             unsafe_allow_html=True,
         )
 
-        curriculum_file = st.file_uploader(
-            "Upload curriculum bank CSV (optional)", type=["csv"], key="curriculum_csv"
-        )
-
-        if curriculum_file is not None:
-            try:
-                cur_df = pd.read_csv(curriculum_file)
-                st.session_state["curriculum_df"] = cur_df
-                st.write("Curriculum bank preview:")
-                st.dataframe(cur_df.head(), use_container_width=True)
-            except Exception as e:
-                st.error(f"Could not read curriculum bank: {e}")
+        st.markdown("**RAG loading status:**")
+        for g in [3, 4, 5, 6]:
+            cur_ok = "Loaded" if curriculum_memory.get(g) else "Missing"
+            book_ok = "Loaded" if textbook_memory.get(g) else "Missing"
+            st.markdown(f"- Grade {g}: Curriculum = **{cur_ok}**, Top Stars = **{book_ok}**")
 
         st.markdown("</div>", unsafe_allow_html=True)
 
@@ -554,7 +586,7 @@ def main():
             <span class="tool-tag">Rule-based classifier</span>
             <p class="step-help">
             This step automatically analyzes student scores and assigns performance levels
-            (Low / Medium / High) based on fixed thresholds used in the thesis methodology.
+            (Low / Medium / High) based on fixed thresholds (0–11, 12–21, 22–25) per skill.
             </p>
             """,
             unsafe_allow_html=True,
@@ -566,23 +598,18 @@ def main():
                 st.error("Please upload the student performance CSV first.")
             else:
                 try:
-                    # 1) تحويل البيانات إلى long format: صف لكل طالب + skill
                     df_proc = transform_thesis_format(df_raw_state)
 
-                    # 2) تصنيف الدرجة لكل skill
                     df_proc["level"] = df_proc["score"].apply(classify_level)
 
-                    # 3) ربط المستوى بدرجة منهجية
                     df_proc["target_curriculum_grade"] = df_proc["level"].map(
                         {"Low": 3, "Medium": 5, "High": 6}
                     )
 
-                    # حفظ في الـ session
                     st.session_state["processed_df"] = df_proc
 
                     st.success("Student data processed successfully ✔")
 
-                    # 4) ملخص حسب المستوى
                     counts = df_proc["level"].value_counts()
                     st.markdown("**Classification summary (by level):**")
                     st.markdown(
@@ -591,13 +618,11 @@ def main():
                         f"- High: {counts.get('High', 0)} students"
                     )
 
-                    # 5) ملخص حسب المهارة
                     st.markdown("**Skills detected in the dataset:**")
                     skills_counts = df_proc["skill"].value_counts()
                     for sk, cnt in skills_counts.items():
                         st.markdown(f"- {sk}: {cnt} records")
 
-                    # 6) معاينة مرتبة حسب الطالب والمهارة
                     st.write("Processed data preview (sorted by student & skill):")
                     st.dataframe(
                         df_proc.sort_values(["student_id", "skill"]).head(20),
@@ -620,14 +645,13 @@ def main():
             <span class="tool-tag">PDF export</span>
             <p class="step-help">
             For each student in the selected skill and level, the system generates a personalised worksheet
-            and a separate answer key. Only download buttons are shown (no raw text on screen).
+            and a separate answer key, aligned with Qatar National Curriculum standards and Top Stars textbooks.
             </p>
             """,
             unsafe_allow_html=True,
         )
 
         df = st.session_state.get("processed_df", None)
-        curriculum_df = st.session_state.get("curriculum_df", None)
 
         if df is None:
             st.info("Please go to the 'Data & RAG' tab and process the student data first.")
@@ -654,17 +678,20 @@ def main():
                     with st.spinner("Generating worksheets and answer keys…"):
                         try:
                             for _, row in target_df.iterrows():
+                                grade_for_rag = int(row["target_curriculum_grade"])
+
                                 rag_context = build_rag_context(
-                                    curriculum_df,
+                                    grade=grade_for_rag,
                                     skill=row["skill"],
-                                    curriculum_grade=row["target_curriculum_grade"],
+                                    curriculum_memory=curriculum_memory,
+                                    textbook_memory=textbook_memory,
                                 )
 
                                 full_text = generate_worksheet(
                                     client=client,
                                     student_name=row["student_name"],
-                                    student_grade=5,  # أو غيريها لو أضفتِ عمود grade
-                                    curriculum_grade=row["target_curriculum_grade"],
+                                    student_grade=5,  # تقدرين تعدلينها لو أضفتِ عمود grade حقيقي
+                                    curriculum_grade=grade_for_rag,
                                     skill=row["skill"],
                                     level=row["level"],
                                     num_questions=num_q,
@@ -716,9 +743,9 @@ def main():
                 </p>
                 <ul class="step-help">
                     <li><b>Pandas</b> — reading the CSV file, reshaping the thesis dataset into long format, and classifying students.</li>
-                    <li><b>Rule-based classifier</b> — thresholds (Low / Medium / High) mapped to curriculum grades for differentiation.</li>
-                    <li><b>RAG</b> — a small curriculum bank CSV is used as a retrieval layer to give GPT concrete topics, objectives, and examples.</li>
-                    <li><b>GPT API</b> — generates passages, questions, and answer keys aligned with the skill and curriculum grade.</li>
+                    <li><b>Rule-based classifier</b> — thresholds (Low / Medium / High) mapped to curriculum grades (3, 5, 6) for differentiation.</li>
+                    <li><b>RAG</b> — curriculum standards and Top Stars textbooks (Grades 3–6) are loaded from PDF files and used as retrieval context.</li>
+                    <li><b>GPT API</b> — generates passages, questions, and answer keys aligned with the skill, level, and curriculum grade.</li>
                     <li><b>PDF export</b> — the final worksheets and answer keys are exported as A4 PDFs so the teacher can download and print them.</li>
                 </ul>
             </div>
