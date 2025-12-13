@@ -42,6 +42,7 @@ def classify_level(score: float) -> str:
 def transform_thesis_format(df: pd.DataFrame) -> pd.DataFrame:
     """
     Convert thesis dataset into long format (one row per student & skill).
+
     Expected columns:
     StudentNumber, StudentName, LanguageFunction, ReadingComprehension, Grammar, Writing
     """
@@ -70,6 +71,7 @@ def transform_thesis_format(df: pd.DataFrame) -> pd.DataFrame:
 
     # If already in long format, just return as is
     return df
+
 
 
 def build_skill_instruction(skill: str) -> str:
