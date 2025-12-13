@@ -183,6 +183,192 @@ def build_rag_context(
         return ""
 
 
+def build_exam_style_task(skill: str, curriculum_grade: int, num_questions: int) -> str:
+    s = str(skill).lower()
+
+    # ---- Language Functions: Read & Match (A/B) ----
+    if "languagefunction" in s or "language function" in s:
+        return f"""
+TASK (School test style):
+Create "Language Functions" section like: Read and match (A/B).
+- Provide 4 items in column A (questions / prompts).
+- Provide 4 answers in column B (a–d) in shuffled order.
+- Use simple classroom English appropriate for Grade {curriculum_grade}.
+Format EXACTLY:
+
+LANGUAGE FUNCTIONS:
+Read and match.
+
+A                          B
+1- ...
+2- ...
+3- ...
+4- ...
+
+a. ...
+b. ...
+c. ...
+d. ...
+
+ANSWER KEY:
+1) c
+2) a
+3) d
+4) b
+"""
+
+    # ---- Reading: Passage + 2 MCQ + 2 short answers ----
+    if "reading" in s:
+        return f"""
+TASK (School test style):
+Create a reading comprehension section (Grade {curriculum_grade}).
+- Write ONE passage (90–140 words for grades 5–6, 60–100 words for grades 3–4).
+- Then write:
+  Q1) MAIN idea MCQ (4 options)
+  Q2) Vocabulary in context MCQ (underlined word) (4 options)
+  Q3) Short answer (1–2 lines)
+  Q4) Short answer (1–2 lines)
+
+Format EXACTLY:
+
+READING COMPREHENSION:
+Directions: Read the passage and answer the questions.
+
+PASSAGE:
+<text with ONE underlined word>
+
+QUESTIONS:
+1- What is the text MAINLY about?
+A) ...
+B) ...
+C) ...
+D) ...
+
+2- What does the underlined word ____ mean?
+A) ...
+B) ...
+C) ...
+D) ...
+
+3- <short answer question>
+____________________________________
+
+4- <short answer question>
+____________________________________
+
+ANSWER KEY:
+1) B
+2) A
+3) <expected answer>
+4) <expected answer>
+"""
+
+    # ---- Vocabulary: Fill gaps from a word box ----
+    if "vocab" in s or "vocabulary" in s:
+        return f"""
+TASK (School test style):
+Create a vocabulary section like: Fill in the gaps with suitable words from the box.
+- Provide a word box with 4 words.
+- Provide 4 sentences with blanks.
+
+Format EXACTLY:
+
+VOCABULARY:
+Fill in the gaps with suitable words from the box.
+
+WORD BOX: word1 - word2 - word3 - word4
+
+1- _________
+2- _________
+3- _________
+4- _________
+
+ANSWER KEY:
+1) wordX
+2) wordY
+3) wordZ
+4) wordW
+"""
+
+    # ---- Writing (Grammar): MCQ + Correct the underlined word/verb ----
+    if "grammar" in s:
+        return f"""
+TASK (School test style):
+Create a Grammar section (Grade {curriculum_grade}) with:
+- 2 MCQ questions (choose correct answer A–D)
+- 2 "Do as shown between brackets" items where the student corrects the underlined verb/word.
+
+Format EXACTLY:
+
+GRAMMAR:
+Read and choose the correct answer.
+
+1- <sentence>
+A) ...
+B) ...
+C) ...
+D) ...
+
+2- <sentence>
+A) ...
+B) ...
+C) ...
+D) ...
+
+Do as shown between brackets.
+
+3- <sentence with UNDERLINED verb/word> (Correct the underlined verb/word)
+____________________________________
+
+4- <sentence with UNDERLINED verb/word> (Correct the underlined verb/word)
+____________________________________
+
+ANSWER KEY:
+1) D
+2) A
+3) <correct form>
+4) <correct form>
+"""
+
+    # ---- Writing: prompt + helping questions + checklist/rubric ----
+    if "writing" in s:
+        # عدد الجمل حسب المرحلة (مثل نماذجكم)
+        sentences = 4 if curriculum_grade == 3 else (5 if curriculum_grade == 4 else (6 if curriculum_grade == 5 else 7))
+        return f"""
+TASK (School test style):
+Create a writing prompt like the school test.
+- Ask for a paragraph of {sentences} sentences.
+- Provide 3–4 helping questions.
+- Add a simple rubric lines (Spelling / Punctuation / Content / Grammar & Vocab).
+
+Format EXACTLY:
+
+WRITING PROMPT:
+Write a paragraph of {sentences} sentences about: <topic>
+
+Helping questions:
+- ...
+- ...
+- ...
+
+RUBRIC (Total 6):
+Writing conventions: Spelling (1), Punctuation (1)
+Language Use (Grammar & Vocab): (2)
+Content (Ideas & organization): (2)
+
+ANSWER KEY:
+(Provide a short model paragraph of {sentences} sentences.)
+"""
+
+    # fallback
+    return f"""
+TASK:
+Create {num_questions} suitable questions for Grade {curriculum_grade} focusing on the skill: {skill}.
+Provide ANSWER KEY.
+"""
+
+
+
 # =====================================================
 # 4. Worksheet generation helpers
 # =====================================================
@@ -259,43 +445,25 @@ Additional instructions about the skill:
 
 {rag_section}
 
-Task:
-1. Write a short reading passage (80–120 words) appropriate for the target grade.
-2. The passage and questions must clearly practise the given skill.
-3. Create {num_questions} multiple-choice questions (A–D).
-4. Provide an answer key clearly.
-
-Required format (use exactly these headings):
-
-PASSAGE:
-
-<your passage>
-
-QUESTIONS:
-1) ...
-A) ...
-B) ...
-C) ...
-D) ...
-2) ...
-
-ANSWER KEY:
-1) C
-2) A
-...
-
-"""
-
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
-        temperature=0.6,
+    task_block = build_exam_style_task(
+        skill=skill,
+        curriculum_grade=curriculum_grade,
+        num_questions=num_questions
     )
 
-    return response.choices[0].message.content
+    user_prompt = f"""
+Student name: {student_name}
+Actual school grade: {student_grade}
+Target curriculum grade: {curriculum_grade}
+Skill: {skill}
+Performance level: {level} (Low / Medium / High)
+
+Curriculum guidance (RAG):
+{rag_section}
+
+{task_block}
+"""
+
 
 
 def split_worksheet_and_answer(text: str):
