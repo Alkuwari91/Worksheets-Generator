@@ -530,7 +530,7 @@ CUSTOM_CSS = """
 /* HEADER */
 .app-header {
     width: 100%;
-    padding: 1.6rem 2rem;
+padding: 1.6rem 2rem;
     background: linear-gradient(135deg, #8A1538, #5e0d24);
     border-radius: 0 0 20px 20px;
     color: #ffffff;
@@ -550,9 +550,6 @@ CUSTOM_CSS = """
 
 </style>
 """
-
-
-
 
 # =====================================================
 # 6. Streamlit App
