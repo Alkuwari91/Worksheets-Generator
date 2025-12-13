@@ -579,34 +579,52 @@ def main():
             if df_raw_state is None:
                 st.error("Please upload the student performance CSV first.")
             else:
+                        if st.button("Process student data"):
+            df_raw_state = st.session_state.get("df_raw", None)
+            if df_raw_state is None:
+                st.error("Please upload the student performance CSV first.")
+            else:
                 try:
+                    # 1) تحويل البيانات إلى long format: صف لكل طالب + skill
                     df_proc = transform_thesis_format(df_raw_state)
+
+                    # 2) تصنيف الدرجة لكل skill
                     df_proc["level"] = df_proc["score"].apply(classify_level)
 
-# (اختياري) ربط كل مستوى بدرجة منهجية
+                    # 3) (اختياري) ربط كل مستوى بدرجة منهجية
                     df_proc["target_curriculum_grade"] = df_proc["level"].map(
-                    {"Low": 3, "Medium": 5, "High": 6}
-
-
+                        {"Low": 3, "Medium": 5, "High": 6}
                     )
+
+                    # حفظ في الـ session
                     st.session_state["processed_df"] = df_proc
 
                     st.success("Student data processed successfully ✔")
 
+                    # 4) ملخّص حسب المستوى
                     counts = df_proc["level"].value_counts()
-                    st.markdown("**Classification summary:**")
+                    st.markdown("**Classification summary (by level):**")
                     st.markdown(
                         f"- Low: {counts.get('Low', 0)} students  \n"
                         f"- Medium: {counts.get('Medium', 0)} students  \n"
                         f"- High: {counts.get('High', 0)} students"
                     )
 
-                    st.write("Processed data preview:")
-                    st.dataframe(df_proc.head(), use_container_width=True)
-                except Exception as e:
-                    st.error(f"Error while processing data: {e}")
+                    # 5) ملخّص حسب المهارة
+                    st.markdown("**Skills detected in the dataset:**")
+                    skills_counts = df_proc["skill"].value_counts()
+                    for sk, cnt in skills_counts.items():
+                        st.markdown(f"- {sk}: {cnt} records")
 
-        st.markdown("</div>", unsafe_allow_html=True)
+                    # 6) معاينة مرتبة حسب الطالب والمهارة
+                    st.write("Processed data preview (sorted by student & skill):")
+                    st.dataframe(
+                        df_proc.sort_values(["student_id", "skill"]).head(20),
+                        use_container_width=True,
+                    )
+
+                except Exception as e:
+
 
     # -------- GENERATE WORKSHEETS TAB --------
     with tab_generate:
