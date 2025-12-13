@@ -23,7 +23,7 @@ def get_api_key() -> str:
 
 def classify_level(score: float) -> str:
     """
-    Custom thresholds requested by Marwa:
+    Thresholds (per skill score out of 25):
     Low:    0–11
     Medium: 12–21
     High:   22–25
@@ -35,7 +35,7 @@ def classify_level(score: float) -> str:
     elif score <= 25:
         return "High"
     else:
-        return "Unknown"   # إذا الدرجة خارج النطاق
+        return "Unknown"   # لو في درجات خارج 0–25
 
 
 
