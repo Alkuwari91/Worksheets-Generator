@@ -526,13 +526,6 @@ def text_to_pdf(title: str, content: str) -> bytes:
 
 CUSTOM_CSS = """
 <style>
-header, footer {visibility: hidden;}
-
-body, .stApp {
-    background: #f4f5f7;
-    font-family: "Cairo", sans-serif;
-    color: #1f2937;
-}
 
 /* HEADER */
 .app-header {
@@ -552,10 +545,12 @@ body, .stApp {
 
 .header-sub {
     font-size: 1rem;
-    opacity: .95;
+    opacity: 0.95;
 }
+
 </style>
 """
+
 
 
 
