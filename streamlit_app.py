@@ -35,8 +35,7 @@ def classify_level(score: float) -> str:
     elif score <= 25:
         return "High"
     else:
-        return "Unknown"   # لو في درجات خارج 0–25
-
+        return "Unknown"   # درجات خارج النطاق المتوقع
 
 
 def transform_thesis_format(df: pd.DataFrame) -> pd.DataFrame:
@@ -52,6 +51,7 @@ def transform_thesis_format(df: pd.DataFrame) -> pd.DataFrame:
         "Grammar", "Writing"
     }
 
+    # إذا كان الملف بنفس تنسيق الرسالة
     if thesis_cols.issubset(df.columns):
         df_long = df.melt(
             id_vars=["StudentNumber", "StudentName"],
@@ -71,7 +71,6 @@ def transform_thesis_format(df: pd.DataFrame) -> pd.DataFrame:
 
     # If already in long format, just return as is
     return df
-
 
 
 def build_skill_instruction(skill: str) -> str:
@@ -286,7 +285,6 @@ def text_to_pdf(title: str, content: str) -> bytes:
 
 CUSTOM_CSS = """
 <style>
-
 /* Hide Streamlit default header */
 header, footer {visibility: hidden;}
 
@@ -307,13 +305,11 @@ body, .stApp {
     margin-bottom: 1.5rem;
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.20);
 }
-
 .header-title {
     font-size: 2.2rem;
     font-weight: 800;
     letter-spacing: .3px;
 }
-
 .header-sub {
     font-size: 1rem;
     opacity: .95;
@@ -324,11 +320,9 @@ body, .stApp {
     margin-top: .5rem;
     margin-bottom: 1.2rem;
 }
-
 .stTabs [data-baseweb="tab-list"] {
     gap: .6rem;
 }
-
 .stTabs [data-baseweb="tab"] {
     background: #e8eaf0;
     color: #4b5563;
@@ -337,12 +331,10 @@ body, .stApp {
     font-size: .9rem;
     border: none;
 }
-
 .stTabs [data-baseweb="tab"]:hover {
     background: #d5d7df;
     color: #111827;
 }
-
 .stTabs [data-baseweb="tab"][aria-selected="true"] {
     background: linear-gradient(135deg, #8A1538, #b11b49);
     color: #ffffff !important;
@@ -359,13 +351,11 @@ body, .stApp {
     border: 1px solid #e5e7eb;
     box-shadow: 0 6px 20px rgba(0,0,0,0.06);
 }
-
 .step-title {
     color: #8A1538;
     font-size: 1.3rem;
     font-weight: 700;
 }
-
 .step-help {
     color: #555;
     font-size: .95rem;
@@ -394,7 +384,6 @@ body, .stApp {
     font-size: .9rem;
     box-shadow: 0 4px 12px rgba(139, 20, 54, 0.35);
 }
-
 .stButton > button:hover {
     background: #7a0e31;
 }
@@ -408,7 +397,6 @@ body, .stApp {
     padding: .45rem 1.2rem;
     font-size: .85rem;
 }
-
 .stDownloadButton > button:hover {
     background: #f3eeff;
     border-color: #c4c7ff;
@@ -428,7 +416,6 @@ body, .stApp {
 .stDataFrame, .stMarkdown, .stText {
     color: #1f2937 !important;
 }
-
 </style>
 """
 
@@ -517,7 +504,6 @@ def main():
         )
 
         uploaded = st.file_uploader("Upload Students.csv", type=["csv"])
-
         if uploaded is not None:
             try:
                 df_raw = pd.read_csv(uploaded)
@@ -579,11 +565,6 @@ def main():
             if df_raw_state is None:
                 st.error("Please upload the student performance CSV first.")
             else:
-                        if st.button("Process student data"):
-            df_raw_state = st.session_state.get("df_raw", None)
-            if df_raw_state is None:
-                st.error("Please upload the student performance CSV first.")
-            else:
                 try:
                     # 1) تحويل البيانات إلى long format: صف لكل طالب + skill
                     df_proc = transform_thesis_format(df_raw_state)
@@ -591,7 +572,7 @@ def main():
                     # 2) تصنيف الدرجة لكل skill
                     df_proc["level"] = df_proc["score"].apply(classify_level)
 
-                    # 3) (اختياري) ربط كل مستوى بدرجة منهجية
+                    # 3) ربط المستوى بدرجة منهجية
                     df_proc["target_curriculum_grade"] = df_proc["level"].map(
                         {"Low": 3, "Medium": 5, "High": 6}
                     )
@@ -601,7 +582,7 @@ def main():
 
                     st.success("Student data processed successfully ✔")
 
-                    # 4) ملخّص حسب المستوى
+                    # 4) ملخص حسب المستوى
                     counts = df_proc["level"].value_counts()
                     st.markdown("**Classification summary (by level):**")
                     st.markdown(
@@ -610,7 +591,7 @@ def main():
                         f"- High: {counts.get('High', 0)} students"
                     )
 
-                    # 5) ملخّص حسب المهارة
+                    # 5) ملخص حسب المهارة
                     st.markdown("**Skills detected in the dataset:**")
                     skills_counts = df_proc["skill"].value_counts()
                     for sk, cnt in skills_counts.items():
@@ -624,7 +605,9 @@ def main():
                     )
 
                 except Exception as e:
+                    st.error(f"Error while processing data: {e}")
 
+        st.markdown("</div>", unsafe_allow_html=True)
 
     # -------- GENERATE WORKSHEETS TAB --------
     with tab_generate:
@@ -657,7 +640,10 @@ def main():
 
             num_q = st.slider("Number of questions per worksheet", 3, 10, 5)
 
-            target_df = df[(df["skill"] == selected_skill) & (df["level"] == selected_level)]
+            target_df = df[
+                (df["skill"] == selected_skill) &
+                (df["level"] == selected_level)
+            ]
 
             st.markdown(f"Students in this group: **{len(target_df)}**")
 
@@ -677,7 +663,7 @@ def main():
                                 full_text = generate_worksheet(
                                     client=client,
                                     student_name=row["student_name"],
-                                    student_grade=row["grade"] if "grade" in row else 5,
+                                    student_grade=5,  # أو غيريها لو أضفتِ عمود grade
                                     curriculum_grade=row["target_curriculum_grade"],
                                     skill=row["skill"],
                                     level=row["level"],
@@ -730,7 +716,7 @@ def main():
                 </p>
                 <ul class="step-help">
                     <li><b>Pandas</b> — reading the CSV file, reshaping the thesis dataset into long format, and classifying students.</li>
-                    <li><b>Rule-based classifier</b> — fixed thresholds (Low / Medium / High) mapped to curriculum grades for differentiation.</li>
+                    <li><b>Rule-based classifier</b> — thresholds (Low / Medium / High) mapped to curriculum grades for differentiation.</li>
                     <li><b>RAG</b> — a small curriculum bank CSV is used as a retrieval layer to give GPT concrete topics, objectives, and examples.</li>
                     <li><b>GPT API</b> — generates passages, questions, and answer keys aligned with the skill and curriculum grade.</li>
                     <li><b>PDF export</b> — the final worksheets and answer keys are exported as A4 PDFs so the teacher can download and print them.</li>
