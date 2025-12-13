@@ -374,6 +374,34 @@ Provide ANSWER KEY.
 # =====================================================
 
 
+def build_skill_instruction(skill: str) -> str:
+    s = str(skill).lower()
+    if "grammar" in s:
+        return (
+            "Focus the questions on grammar usage, sentence structure, verb tenses, "
+            "and error-correction style MCQs, appropriate for the target grade."
+        )
+    if "reading" in s:
+        return (
+            "Focus the questions on reading comprehension: main idea, details, "
+            "inference, and vocabulary in context related to the passage."
+        )
+    if "writing" in s:
+        return (
+            "Focus the questions on writing skills: organising ideas, choosing "
+            "correct connectors, and building clear sentences."
+        )
+    if "languagefunction" in s or "language function" in s:
+        return (
+            "Focus the questions on language functions such as making requests, "
+            "giving advice, asking for information, agreeing and disagreeing, etc."
+        )
+    return (
+        "Make sure the questions clearly practise the given skill in an "
+        "age-appropriate way."
+    )
+
+
 def generate_worksheet(
     client: OpenAI,
     student_name: str,
@@ -386,26 +414,41 @@ def generate_worksheet(
 ) -> str:
     """Generate worksheet using GPT based on grade, skill, level and RAG context."""
 
+    skill_instruction = build_skill_instruction(skill)
+
     system_prompt = (
-        "You are a primary school English assessment generator aligned with the Qatar National Curriculum. "
-        "You MUST follow the exact task format provided. "
-        "Do NOT create a reading passage unless the selected skill is ReadingComprehension/Reading. "
-        "Keep language clear, age-appropriate, and culturally suitable."
+        "You are an educational content generator for primary school English "
+        "within the Qatari National Curriculum. Adjust difficulty and language "
+        "based on the TARGET curriculum grade. Keep content clear, culturally appropriate, "
+        "and suitable for students."
     )
 
-    # ✅ خليه نص بسيط بدون تكرار headings داخل headings
     rag_section = ""
     if rag_context:
         rag_section = f"""
-CURRICULUM BANK (RAG) — use these points to align your questions:
+Curriculum-aligned standards and textbook-style excerpts for this grade and skill:
+Use the following teaching standards, objectives, topics, and examples when generating the passage and questions.
+Ensure that ALL worksheet content aligns with these curriculum requirements:
+
 {rag_context}
 """
 
-    # ✅ هذا اللي يحدد شكل الاختبار حسب skill
+    user_prompt = f"""
+Student name: {student_name}
+Actual school grade: {student_grade}
+Target curriculum grade: {curriculum_grade}
+Skill: {skill}
+Performance level: {level} (Low / Medium / High)
+
+Additional instructions about the skill:
+{skill_instruction}
+
+{rag_section}
+
     task_block = build_exam_style_task(
         skill=skill,
         curriculum_grade=curriculum_grade,
-        num_questions=num_questions,
+        num_questions=num_questions
     )
 
     user_prompt = f"""
@@ -413,31 +456,66 @@ Student name: {student_name}
 Actual school grade: {student_grade}
 Target curriculum grade: {curriculum_grade}
 Skill: {skill}
-Performance level: {level}
+Performance level: {level} (Low / Medium / High)
 
+Curriculum guidance (RAG):
 {rag_section}
-
-IMPORTANT RULES:
-- Follow the EXACT section headings and format in the TASK block.
-- If Skill is Grammar: DO NOT write a reading passage.
-- If Skill is Writing: DO NOT write a reading passage unless the task says so.
-- If Skill is LanguageFunction: use matching format A/B.
-- Provide ANSWER KEY exactly as required.
 
 {task_block}
 """
 
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
-        temperature=0.4,
-    )
 
-    return response.choices[0].message.content
 
+def split_worksheet_and_answer(text: str):
+    """Split GPT output into worksheet body (no answers) and answer key."""
+    marker = "ANSWER KEY:"
+    idx = text.upper().find(marker)
+    if idx == -1:
+        return text.strip(), "ANSWER KEY:\n(Not clearly provided by the model.)"
+    body = text[:idx].strip()
+    answer = text[idx:].strip()
+    return body, answer
+
+
+def text_to_pdf(title: str, content: str) -> bytes:
+    """
+    Convert text to a simple A4 PDF (in memory).
+    """
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+
+    x = 40
+    y = height - 60
+
+    c.setFont("Helvetica-Bold", 14)
+    c.drawString(x, y, title)
+    y -= 30
+
+    c.setFont("Helvetica", 11)
+
+    for line in content.split("\n"):
+        while len(line) > 110:
+            part = line[:110]
+            c.drawString(x, y, part)
+            line = line[110:]
+            y -= 14
+            if y < 40:
+                c.showPage()
+                y = height - 60
+                c.setFont("Helvetica", 11)
+        c.drawString(x, y, line)
+        y -= 14
+        if y < 40:
+            c.showPage()
+            y = height - 60
+            c.setFont("Helvetica", 11)
+
+    c.showPage()
+    c.save()
+    pdf_bytes = buffer.getvalue()
+    buffer.close()
+    return pdf_bytes
 
 
 # =====================================================
