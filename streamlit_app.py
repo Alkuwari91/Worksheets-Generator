@@ -119,15 +119,15 @@ def transform_thesis_format(df: pd.DataFrame) -> pd.DataFrame:
 
 
 @st.cache_data
-def load_curriculum_bank() -> pd.DataFrame | None:
-    """
-    Load curriculum_bank.csv once (Grades 3–6 syllabus, grammar, vocabulary).
-    The file must be in the same folder as streamlit_app.py.
-    """
+def load_curriculum_bank():
     try:
-        return pd.read_csv("curriculum_bank.csv")
-    except Exception:
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        csv_path = os.path.join(base_dir, "curriculum_bank.csv")
+        return pd.read_csv(csv_path)
+    except Exception as e:
+        st.error(f"Failed to load curriculum_bank.csv: {e}")
         return None
+
 
 
 def build_rag_context(
