@@ -581,11 +581,13 @@ def main():
             else:
                 try:
                     df_proc = transform_thesis_format(df_raw_state)
-                    df_proc["level"] = df_proc["score"].apply(classify_level)
-                    # Map performance to curriculum grade:
-                    # Low -> 3, Medium -> 5, High -> 6 (example mapping)
-                    df_proc["target_curriculum_grade"] = df_proc["level"].map(
-                        {"Low": 3, "Medium": 5, "High": 6}
+df_proc["level"] = df_proc["score"].apply(classify_level)
+
+# (اختياري) ربط كل مستوى بدرجة منهجية
+df_proc["target_curriculum_grade"] = df_proc["level"].map(
+    {"Low": 3, "Medium": 5, "High": 6}
+)
+
                     )
                     st.session_state["processed_df"] = df_proc
 
