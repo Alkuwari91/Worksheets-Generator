@@ -14,13 +14,6 @@ from reportlab.pdfgen import canvas
 # PDF TEXT NORMALIZATION
 # =========================
 def normalize_pdf_text(t: str) -> str:
-    """
-    Clean and normalize generated text before converting it to PDF.
-
-    - Removes decorative symbols (■ • ▪ etc.) without destroying spacing.
-    - Keeps test-like formatting: headings, blank lines, numbering.
-    - Normalizes smart punctuation to avoid PDF font rendering boxes.
-    """
     if not t:
         return ""
 
@@ -28,8 +21,11 @@ def normalize_pdf_text(t: str) -> str:
     t = t.replace("\r\n", "\n").replace("\r", "\n")
     t = t.replace("\u2028", "\n").replace("\u2029", "\n")
 
-    # Remove/convert weird bullets & blocks that can appear as squares
-    t = t.replace("■", "\n").replace("▪", "\n").replace("•", "\n")
+    # Remove decorative symbols that break Word-style layout
+    t = re.sub(r"[■▪•●◦]", "", t)
+
+    # Fix spacing after cleanup
+    t = re.sub(r"\n{3,}", "\n\n", t)
 
     # Normalize quotes/dashes
     t = (
@@ -38,11 +34,8 @@ def normalize_pdf_text(t: str) -> str:
          .replace("–", "-").replace("—", "-")
     )
 
-    # Clean trailing spaces and excessive blank lines
-    t = re.sub(r"[ \t]+\n", "\n", t)
-    t = re.sub(r"\n{3,}", "\n\n", t)
-
     return t.strip()
+
 
 
 # =====================================================
@@ -384,11 +377,21 @@ def generate_worksheet(
     IMPORTANT: Do not generate a reading passage unless skill is reading.
     """
     system_prompt = (
-        "You are a primary school English assessment generator aligned with the Qatar National Curriculum. "
-        "You MUST follow the exact section headings and format in the TASK block. "
-        "Do NOT create a reading passage unless the selected skill is Reading/ReadingComprehension. "
-        "Keep language clear, age-appropriate, and culturally suitable."
-    )
+    "You are a primary school English assessment generator aligned with the Qatar National Curriculum. "
+    "You MUST follow the exact section headings and format in the TASK block. "
+    "Do NOT create a reading passage unless the selected skill is Reading/ReadingComprehension. "
+    "Keep language clear, age-appropriate, and culturally suitable.\n\n"
+
+    "IMPORTANT FORMATTING RULES:\n"
+    "- Do NOT use symbols, bullets, boxes, or decorative characters.\n"
+    "- Use plain text only (Word-style exam format).\n"
+    "- Leave one blank line between sections.\n"
+    "- Put section titles on their own lines.\n"
+    "- Put A and B on separate lines.\n"
+    "- Number questions exactly like this: 1-, 2-, 3-.\n"
+    "- Do NOT use ■, ●, •, or similar symbols."
+)
+
 
     rag_section = ""
     if rag_context:
