@@ -182,15 +182,15 @@ def build_rag_context(
 def build_exam_style_task(skill: str, curriculum_grade: int, num_questions: int) -> str:
     s = str(skill).strip().lower()
 
-if "languagefunction" in s or "language function" in s:
-    return f"""
+    if "languagefunction" in s or "language function" in s:
+        return f"""
 Create a LANGUAGE FUNCTIONS section exactly like a school test.
 
 STRICT RULES:
 - Use ONE item per line.
 - Use clear line breaks.
 - DO NOT use symbols like ■ or bullets.
-- Keep columns clearly separated by new lines only.
+- Keep columns separated by new lines only.
 
 FORMAT EXACTLY LIKE THIS:
 
@@ -215,6 +215,7 @@ ANSWER KEY:
 3) d
 4) c
 """
+
 
     if "reading" in s:
         return f"""
