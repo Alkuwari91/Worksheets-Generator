@@ -21,18 +21,13 @@ def normalize_pdf_text(t: str) -> str:
     t = t.replace("\r\n", "\n").replace("\r", "\n")
     t = t.replace("\u2028", "\n").replace("\u2029", "\n")
 
-    # Remove decorative symbols that break Word-style layout
-    t = re.sub(r"[■▪•●◦]", "", t)
+    # Remove decorative/bullet/box symbols (covers many variants)
+BOX_BULLET_CHARS = "■▪•●◦□■◼◻◾◽⬛⬜▪︎•︎"
+t = t.translate(str.maketrans("", "", BOX_BULLET_CHARS))
 
-    # Fix spacing after cleanup
-    t = re.sub(r"\n{3,}", "\n\n", t)
+# Also remove private-use bullets from Word/Wingdings that sometimes appear
+t = re.sub(r"[\uf000-\uf0ff]", "", t)
 
-    # Normalize quotes/dashes
-    t = (
-        t.replace("’", "'").replace("‘", "'")
-         .replace("“", '"').replace("”", '"')
-         .replace("–", "-").replace("—", "-")
-    )
 
     return t.strip()
 
@@ -459,8 +454,9 @@ def clean_text_for_pdf(text: str) -> str:
 
 
 def text_to_pdf(title: str, content: str) -> bytes:
-    content = normalize_pdf_text(content)  # ✅ ضمان التنظيف قبل PDF
-    content = content.replace("■", "")     # ✅ احتياط إضافي (حتى لو ما التقطه regex)
+    content = normalize_pdf_text(content)
+    content = re.sub(r"[\uf000-\uf0ff]", "", content)  # extra safety
+
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
     _, height = A4
