@@ -459,6 +459,8 @@ def clean_text_for_pdf(text: str) -> str:
 
 
 def text_to_pdf(title: str, content: str) -> bytes:
+    content = normalize_pdf_text(content)  # ✅ ضمان التنظيف قبل PDF
+    content = content.replace("■", "")     # ✅ احتياط إضافي (حتى لو ما التقطه regex)
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
     _, height = A4
