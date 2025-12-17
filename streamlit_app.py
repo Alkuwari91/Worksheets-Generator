@@ -10,6 +10,31 @@ from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 
 
+# =========================
+# PDF TEXT NORMALIZATION
+# =========================
+def normalize_pdf_text(t: str) -> str:
+    """
+    Clean and normalize generated text before converting it to PDF.
+    """
+    if not t:
+        return ""
+
+    # Normalize newlines
+    t = t.replace("\r\n", "\n").replace("\r", "\n")
+    t = t.replace("\u2028", "\n").replace("\u2029", "\n")
+
+    # Normalize quotes/dashes (avoid PDF boxes)
+    t = (
+        t.replace("’", "'").replace("‘", "'")
+         .replace("“", '"').replace("”", '"')
+         .replace("–", "-").replace("—", "-")
+    )
+
+    return t
+
+
+
 # =====================================================
 # 1. Helpers: API key
 # =====================================================
@@ -738,70 +763,48 @@ def main():
             st.markdown(f"Students in this group: **{len(target_df)}**")
 
             if st.button("Generate PDFs for this group"):
-                if target_df.empty:
-                    st.error("No students match this skill + level.")
-                else:
-                    with st.spinner("Generating worksheets and answer keys…"):
-                        try:
-                            for _, row in target_df.iterrows():
-                                grade_for_rag = int(row.get("recommended_grade", 5))
+    if target_df.empty:
+        st.error("No students match this skill + level.")
+    else:
+        with st.spinner("Generating worksheets and answer keys…"):
+            try:
+                for _, row in target_df.iterrows():
+                    grade_for_rag = int(row.get("recommended_grade", 5))
 
-                                rag_context = build_rag_context(
-                                    curriculum_df=curriculum_df2,
-                                    skill=str(row["skill"]),
-                                    curriculum_grade=grade_for_rag,
-                                )
+                    rag_context = build_rag_context(
+                        curriculum_df=curriculum_df2,
+                        skill=str(row["skill"]),
+                        curriculum_grade=grade_for_rag,
+                    )
 
-                                full_text = generate_worksheet(
-                                    client=client,
-                                    student_name=str(row["student_name"]),
-                                    student_grade=5,
-                                    curriculum_grade=grade_for_rag,
-                                    skill=str(row["skill"]),
-                                    level=str(row["level"]),
-                                    num_questions=int(num_q),
-                                    rag_context=rag_context,
-                                )
+                    full_text = generate_worksheet(
+                        client=client,
+                        student_name=str(row["student_name"]),
+                        student_grade=5,
+                        curriculum_grade=grade_for_rag,
+                        skill=str(row["skill"]),
+                        level=str(row["level"]),
+                        num_questions=int(num_q),
+                        rag_context=rag_context,
+                    )
 
-                                worksheet_body, answer_key = split_worksheet_and_answer(full_text)
+                    worksheet_body, answer_key = split_worksheet_and_answer(full_text)
 
-worksheet_body = normalize_pdf_text(worksheet_body)
-answer_key = normalize_pdf_text(answer_key)
+                    worksheet_body = normalize_pdf_text(worksheet_body)
+                    answer_key = normalize_pdf_text(answer_key)
 
-ws_pdf = text_to_pdf(
-    title=f"Worksheet for {row['student_name']}",
-    content=worksheet_body,
-)
-ak_pdf = text_to_pdf(
-    title=f"Answer Key for {row['student_name']}",
-    content=answer_key,
-)
+                    ws_pdf = text_to_pdf(
+                        title=f"Worksheet for {row['student_name']}",
+                        content=worksheet_body,
+                    )
+                    ak_pdf = text_to_pdf(
+                        title=f"Answer Key for {row['student_name']}",
+                        content=answer_key,
+                    )
 
+            except Exception as e:
+                st.error(f"PDF generation error: {e}")
 
-                                import re
-
-def normalize_pdf_text(t: str) -> str:
-    """
-    Clean and normalize generated text before converting it to PDF.
-
-    Goals:
-    - Remove decorative symbols (■ • ▪ etc.) without destroying spacing.
-    - Keep Word/test-like formatting: headings, blank lines, numbering.
-    - Normalize quotes/dashes to avoid PDF font rendering boxes.
-    """
-    if not t:
-        return ""
-
-    # Normalize newlines
-    t = t.replace("\r\n", "\n").replace("\r", "\n")
-    t = t.replace("\u2028", "\n").replace("\u2029", "\n")  # unicode line separators
-
-    # Normalize quotes/dashes (Helvetica may show boxes for smart punctuation)
-    t = (
-        t.replace("’", "'").replace("‘", "'")
-         .replace("“", '"').replace("”", '"')
-         .replace("–", "-").replace("—", "-")
-    )
 
     # Remove decorative blocks/bullets.
     # If the model outputs repeated symbols as separators, convert to a blank line.
