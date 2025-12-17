@@ -21,6 +21,11 @@ def normalize_pdf_text(t: str) -> str:
     t = t.replace("\r\n", "\n").replace("\r", "\n")
     t = t.replace("\u2028", "\n").replace("\u2029", "\n")
 
+# ✅ مهم
+    t = t.replace("\\n", "\n")
+
+
+
     # Remove decorative/bullet/box symbols (covers many variants)
     BOX_BULLET_CHARS = "■▪•●◦□◼◻◾◽⬛⬜▪︎•︎"
     t = t.translate(str.maketrans("", "", BOX_BULLET_CHARS))
