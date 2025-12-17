@@ -762,9 +762,44 @@ def main():
 
                                 worksheet_body, answer_key = split_worksheet_and_answer(full_text)
 
-                                worksheet_body = clean_text_for_pdf(worksheet_body)
-                                answer_key = clean_text_for_pdf(answer_key)
+worksheet_body = normalize_pdf_text(worksheet_body)
+answer_key = normalize_pdf_text(answer_key)
 
+ws_pdf = text_to_pdf(
+    title=f"Worksheet for {row['student_name']}",
+    content=worksheet_body,
+)
+ak_pdf = text_to_pdf(
+    title=f"Answer Key for {row['student_name']}",
+    content=answer_key,
+)
+
+
+                                import re
+
+def normalize_pdf_text(t: str) -> str:
+    if not t:
+        return ""
+
+    # normalize newlines
+    t = t.replace("\r\n", "\n").replace("\r", "\n")
+    t = t.replace("\u2028", "\n").replace("\u2029", "\n")  # unicode line separators
+
+    # remove/convert weird bullets & blocks that appear as squares
+    t = t.replace("■", "\n")
+    t = t.replace("▪", "\n")
+    t = t.replace("•", "\n")
+
+    # replace smart quotes/dashes (Helvetica sometimes shows boxes)
+    t = t.replace("’", "'").replace("‘", "'")
+    t = t.replace("“", '"').replace("”", '"')
+    t = t.replace("–", "-").replace("—", "-")
+
+    # clean extra spaces and extra blank lines
+    t = re.sub(r"[ \t]+\n", "\n", t)
+    t = re.sub(r"\n{3,}", "\n\n", t)
+
+    return t.strip()
 
                                 ws_pdf = text_to_pdf(
                                     title=f"Worksheet for {row['student_name']}",
