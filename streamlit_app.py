@@ -22,14 +22,14 @@ def normalize_pdf_text(t: str) -> str:
     t = t.replace("\u2028", "\n").replace("\u2029", "\n")
 
     # Remove decorative/bullet/box symbols (covers many variants)
-BOX_BULLET_CHARS = "■▪•●◦□■◼◻◾◽⬛⬜▪︎•︎"
-t = t.translate(str.maketrans("", "", BOX_BULLET_CHARS))
+    BOX_BULLET_CHARS = "■▪•●◦□◼◻◾◽⬛⬜▪︎•︎"
+    t = t.translate(str.maketrans("", "", BOX_BULLET_CHARS))
 
-# Also remove private-use bullets from Word/Wingdings that sometimes appear
-t = re.sub(r"[\uf000-\uf0ff]", "", t)
-
+    # Also remove private-use bullets from Word/Wingdings that sometimes appear
+    t = re.sub(r"[\uf000-\uf0ff]", "", t)
 
     return t.strip()
+
 
 
 
