@@ -182,27 +182,38 @@ def build_rag_context(
 def build_exam_style_task(skill: str, curriculum_grade: int, num_questions: int) -> str:
     s = str(skill).strip().lower()
 
-    if "languagefunction" in s or "language function" in s:
-        return f"""
+if "languagefunction" in s or "language function" in s:
+    return f"""
+Create a LANGUAGE FUNCTIONS section exactly like a school test.
+
+STRICT RULES:
+- Use ONE item per line.
+- Use clear line breaks.
+- DO NOT use symbols like ■ or bullets.
+- Keep columns clearly separated by new lines only.
+
+FORMAT EXACTLY LIKE THIS:
+
 LANGUAGE FUNCTIONS:
 Read and match.
 
-A                          B
-1- ...
-2- ...
-3- ...
-4- ...
+A:
+1- I like pizza, but I don’t like broccoli.
+2- Can I have a glass of water, please?
+3- Would you like some ice cream?
+4- I think swimming is great!
 
-a. ...
-b. ...
-c. ...
-d. ...
+B:
+a- Yes, please! I love ice cream.
+b- My favourite colour is blue because it’s calm.
+c- My favourite sport is football because it’s fun.
+d- I agree. It is very healthy.
 
 ANSWER KEY:
-1) c
+1) b
 2) a
 3) d
-4) b
+4) c
 """
 
     if "reading" in s:
@@ -389,6 +400,22 @@ def split_worksheet_and_answer(text: str):
     body = text[:idx].strip()
     answer = text[idx:].strip()
     return body, answer
+    
+def clean_text_for_pdf(text: str) -> str:
+    replacements = {
+        "■": "",
+        "\t": " ",
+        "  ": " ",
+    }
+    for k, v in replacements.items():
+        text = text.replace(k, v)
+
+    # ضمان سطر فاضي بين الأقسام
+    text = text.replace("A:", "\nA:\n")
+    text = text.replace("B:", "\nB:\n")
+    text = text.replace("ANSWER KEY:", "\nANSWER KEY:\n")
+
+    return text.strip()
 
 
 def text_to_pdf(title: str, content: str) -> bytes:
@@ -733,6 +760,10 @@ def main():
                                 )
 
                                 worksheet_body, answer_key = split_worksheet_and_answer(full_text)
+
+                                worksheet_body = clean_text_for_pdf(worksheet_body)
+                                answer_key = clean_text_for_pdf(answer_key)
+
 
                                 ws_pdf = text_to_pdf(
                                     title=f"Worksheet for {row['student_name']}",
