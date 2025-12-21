@@ -832,6 +832,10 @@ def main():
                                 worksheet_body, answer_key = split_worksheet_and_answer(full_text)
 
                                 worksheet_body = normalize_pdf_text(worksheet_body)
+                                suspects = [(ch, hex(ord(ch))) for ch in worksheet_body[:500] if ord(ch) > 127]
+                                st.write("NON-ASCII SAMPLE:", suspects[:80])
+                                st.write("PREVIEW:", worksheet_body[:300])
+
                                 answer_key = normalize_pdf_text(answer_key)
 
 
