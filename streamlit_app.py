@@ -623,7 +623,6 @@ body, .stApp {
 
 def main():
     st.set_page_config(
-        st.caption("APP VERSION: 2025-12-21-01"),
         page_title="English Worksheets Generator",
         layout="wide",
         initial_sidebar_state="collapsed",
