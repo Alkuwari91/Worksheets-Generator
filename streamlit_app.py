@@ -17,12 +17,18 @@ def normalize_pdf_text(t: str) -> str:
     if not t:
         return ""
 
-    # Normalize newlines
     t = t.replace("\r\n", "\n").replace("\r", "\n")
     t = t.replace("\u2028", "\n").replace("\u2029", "\n")
-
-# ✅ مهم
     t = t.replace("\\n", "\n")
+
+    # 🔑 الحل الحقيقي هنا
+    t = re.sub(r"[■▪•●◦□◼◻◾◽⬛⬜▪︎•︎]", "\n", t)
+
+    t = re.sub(r"[\uf000-\uf0ff]", "", t)
+    t = re.sub(r"\n{3,}", "\n\n", t)
+
+    return t.strip()
+
 
 
 
