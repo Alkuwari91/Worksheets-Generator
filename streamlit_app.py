@@ -1,3 +1,4 @@
+import unicodedata
 import os
 import io
 import re
@@ -17,29 +18,47 @@ def normalize_pdf_text(t: str) -> str:
     if not t:
         return ""
 
+    # Normalize newlines
     t = t.replace("\r\n", "\n").replace("\r", "\n")
     t = t.replace("\u2028", "\n").replace("\u2029", "\n")
+
+    # Convert literal "\n" to real newlines
     t = t.replace("\\n", "\n")
 
-    # 🔑 الحل الحقيقي هنا
-    t = re.sub(r"[■▪•●◦□◼◻◾◽⬛⬜▪︎•︎]", "\n", t)
+    # Turn any box/bullet/symbol/private-use chars into NEWLINES (not delete)
+    def _to_newline(ch: str) -> str:
+        code = ord(ch)
+        cat = unicodedata.category(ch)
 
-    t = re.sub(r"[\uf000-\uf0ff]", "", t)
+        # Private Use Area (often Wingdings-like bullets)
+        if 0xE000 <= code <= 0xF8FF:
+            return "\n"
+
+        # Symbol, other (includes many squares/bullets)
+        if cat == "So":
+            return "\n"
+
+        # Common explicit box/bullet chars
+        if ch in "■▪•●◦□◼◻◾◽⬛⬜":
+            return "\n"
+
+        return ch
+
+    t = "".join(_to_newline(ch) for ch in t)
+
+    # Clean extra spaces/blank lines
+    t = re.sub(r"[ \t]+\n", "\n", t)
     t = re.sub(r"\n{3,}", "\n\n", t)
 
-    return t.strip()
-
-
-
-
-    # Remove decorative/bullet/box symbols (covers many variants)
-    BOX_BULLET_CHARS = "■▪•●◦□◼◻◾◽⬛⬜▪︎•︎"
-    t = t.translate(str.maketrans("", "", BOX_BULLET_CHARS))
-
-    # Also remove private-use bullets from Word/Wingdings that sometimes appear
-    t = re.sub(r"[\uf000-\uf0ff]", "", t)
+    # Normalize quotes/dashes
+    t = (
+        t.replace("’", "'").replace("‘", "'")
+         .replace("“", '"').replace("”", '"')
+         .replace("–", "-").replace("—", "-")
+    )
 
     return t.strip()
+
 
 
 
@@ -465,7 +484,8 @@ def clean_text_for_pdf(text: str) -> str:
 
 
 def text_to_pdf(title: str, content: str) -> bytes:
-    content = normalize_pdf_text(content)
+    
+    content = normalize_pdf_text(content)   # ✅ لازم هناcontent = normalize_pdf_text(content)
     content = re.sub(r"[\uf000-\uf0ff]", "", content)  # extra safety
 
     buffer = io.BytesIO()
