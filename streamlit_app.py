@@ -25,30 +25,12 @@ def normalize_pdf_text(t: str) -> str:
     # Convert literal "\n" to real newlines
     t = t.replace("\\n", "\n")
 
-    # Turn any box/bullet/symbol/private-use chars into NEWLINES (not delete)
-    def _to_newline(ch: str) -> str:
-        code = ord(ch)
-        cat = unicodedata.category(ch)
+    # Replace tabs with spaces
+    t = t.replace("\t", " ")
 
-        # Private Use Area (often Wingdings-like bullets)
-        if 0xE000 <= code <= 0xF8FF:
-            return "\n"
-
-        # Symbol, other (includes many squares/bullets)
-        if cat == "So":
-            return "\n"
-
-        # Common explicit box/bullet chars
-        if ch in "■▪•●◦□◼◻◾◽⬛⬜":
-            return "\n"
-
-        return ch
-
-    t = "".join(_to_newline(ch) for ch in t)
-
-    # Clean extra spaces/blank lines
-    t = re.sub(r"[ \t]+\n", "\n", t)
-    t = re.sub(r"\n{3,}", "\n\n", t)
+    # ✅ Remove ASCII control characters (they show as squares in PDF viewers)
+    # Keep only newline \n
+    t = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", "", t)
 
     # Normalize quotes/dashes
     t = (
@@ -57,7 +39,42 @@ def normalize_pdf_text(t: str) -> str:
          .replace("–", "-").replace("—", "-")
     )
 
+    # Improve exam-style spacing
+    t = re.sub(r"\n{3,}", "\n\n", t)
+    t = re.sub(r"[ ]{2,}", " ", t)
+
     return t.strip()
+def normalize_pdf_text(t: str) -> str:
+    if not t:
+        return ""
+
+    # Normalize newlines
+    t = t.replace("\r\n", "\n").replace("\r", "\n")
+    t = t.replace("\u2028", "\n").replace("\u2029", "\n")
+
+    # Convert literal "\n" to real newlines
+    t = t.replace("\\n", "\n")
+
+    # Replace tabs with spaces
+    t = t.replace("\t", " ")
+
+    # ✅ Remove ASCII control characters (they show as squares in PDF viewers)
+    # Keep only newline \n
+    t = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", "", t)
+
+    # Normalize quotes/dashes
+    t = (
+        t.replace("’", "'").replace("‘", "'")
+         .replace("“", '"').replace("”", '"')
+         .replace("–", "-").replace("—", "-")
+    )
+
+    # Improve exam-style spacing
+    t = re.sub(r"\n{3,}", "\n\n", t)
+    t = re.sub(r"[ ]{2,}", " ", t)
+
+    return t.strip()
+
 
 
 
@@ -502,7 +519,7 @@ def text_to_pdf(title: str, content: str) -> bytes:
 
     c.setFont("Helvetica", 11)
 
-    for line in content.split("\\n"):
+    for line in content.split("\n"):
         while len(line) > 110:
             part = line[:110]
             c.drawString(x, y, part)
