@@ -485,7 +485,8 @@ def clean_text_for_pdf(text: str) -> str:
 
 def text_to_pdf(title: str, content: str) -> bytes:
     
-    content = normalize_pdf_text(content)   # ✅ لازم هناcontent = normalize_pdf_text(content)
+    content = normalize_pdf_text(content)   # ✅ لازم هناcontent = normalize_pdf_text(content)print("DEBUG_HAS_SQUARE:", "■" in content, content[:120])
+
     content = re.sub(r"[\uf000-\uf0ff]", "", content)  # extra safety
 
     buffer = io.BytesIO()
