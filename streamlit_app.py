@@ -431,8 +431,17 @@ def generate_worksheet(
     "- Put section titles on their own lines.\n"
     "- Put A and B on separate lines.\n"
     "- Number questions exactly like this: 1-, 2-, 3-.\n"
-    "- Do NOT use ■, ●, •, or similar symbols."
+    "- Do NOT use ■, ●, •, or similar symbols.\n\n"
+
+    "GRAMMAR QUESTION RULES:\n"
+    "- Do NOT use the word 'blank'.\n"
+    "- Use only underscores ( ______ ) to indicate missing words.\n"
+    "- Do NOT use <u>, </u>, or any HTML or markup tags.\n"
+    "- Do NOT underline words using any method.\n"
+    "- For correction questions, write the full sentence normally, then write the instruction on a new line:\n"
+    "  (Correct the verb) or (Correct the sentence).\n"
 )
+
 
 
     rag_section = ""
