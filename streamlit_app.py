@@ -630,6 +630,49 @@ body, .stApp {
     font-family: "JetBrains Mono", monospace;
     font-size: .85rem;
 }
+/* ====== TABS ====== */
+.stTabs {
+    background: transparent;
+    margin-top: .5rem;
+    margin-bottom: 1.2rem;
+}
+
+/* خلفية شريط التابات */
+.stTabs [data-baseweb="tab-list"] {
+    background: linear-gradient(135deg, #8A1538, #5e0d24);
+    padding: 0.6rem;
+    border-radius: 999px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.18);
+    gap: .6rem;
+}
+
+/* التابات العادية */
+.stTabs [data-baseweb="tab"] {
+    background: transparent;
+    color: #f9fafb;
+    border-radius: 999px;
+    padding: .45rem 1.3rem;
+    font-size: .9rem;
+    border: none;
+    opacity: 0.85;
+}
+
+/* Hover */
+.stTabs [data-baseweb="tab"]:hover {
+    background: rgba(255,255,255,0.15);
+    color: #ffffff;
+    opacity: 1;
+}
+
+/* التاب المختار */
+.stTabs [data-baseweb="tab"][aria-selected="true"] {
+    background: #ffffff;
+    color: #8A1538 !important;
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    opacity: 1;
+}
+
 </style>
 """
 
