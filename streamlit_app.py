@@ -549,13 +549,19 @@ def text_to_pdf(title: str, content: str) -> bytes:
 
 CUSTOM_CSS = """
 <style>
+/* Hide Streamlit header/footer */
 header, footer {visibility: hidden;}
 
+/* App base */
 body, .stApp {
     background: #f4f5f7;
     font-family: "Cairo", sans-serif;
     color: #1f2937;
 }
+
+/* Remove extra top spacing (helps with the grey band above header too) */
+section.main > div { padding-top: 0.5rem !important; }
+.block-container { padding-top: 0.5rem !important; }
 
 /* HEADER */
 .app-header {
@@ -564,7 +570,7 @@ body, .stApp {
     background: linear-gradient(135deg, #8A1538, #5e0d24);
     border-radius: 0 0 20px 20px;
     color: #ffffff;
-    margin-bottom: 1.5rem;
+    margin-bottom: 0.8rem; /* أقل عشان التابات تقرب */
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.20);
 }
 .header-title { font-size: 2.2rem; font-weight: 800; letter-spacing: .3px; }
@@ -630,65 +636,65 @@ body, .stApp {
     font-family: "JetBrains Mono", monospace;
     font-size: .85rem;
 }
-/* ====== FORCE TABS STYLING (works across Streamlit versions) ====== */
 
-/* الخلفية البيضاء حول التابات */
-div[data-testid="stTabs"] {
+/* =========================
+   TABS (Fix the white/grey band + style tabs)
+   ========================= */
+
+/* container area around tabs (kills the grey/white bar) */
+div[data-testid="stTabs"]{
     background: transparent !important;
+    margin-top: -10px !important;  /* يرفع التابات شوي لأعلى */
+    padding-top: 0 !important;
+}
+div[data-testid="stTabs"] > div{
+    background: transparent !important;
+    padding-top: 0 !important;
 }
 
-/* أحيانًا يكون الأبيض في الـ wrapper الداخلي */
-div[data-testid="stTabs"] > div {
-    background: transparent !important;
-}
-
-/* شريط التابات نفسه (tab list) */
-div[data-testid="stTabs"] div[role="tablist"] {
+/* tab list bar */
+div[data-testid="stTabs"] div[role="tablist"]{
     background: linear-gradient(135deg, #8A1538, #5e0d24) !important;
-    padding: 0.6rem !important;
+    padding: 10px 12px !important;
     border-radius: 999px !important;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.18) !important;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.18) !important;
     gap: .6rem !important;
 }
 
-/* إزالة أي خط/حد افتراضي تحت التابات */
-div[data-testid="stTabs"] div[data-baseweb="tab-border"] {
+/* remove default underline/border */
+div[data-testid="stTabs"] div[data-baseweb="tab-border"]{
     display: none !important;
 }
-div[data-testid="stTabs"] div[data-baseweb="tab-highlight"] {
+div[data-testid="stTabs"] div[data-baseweb="tab-highlight"]{
     background: transparent !important;
 }
 
-/* شكل التاب */
-div[data-testid="stTabs"] button[role="tab"] {
+/* tab buttons */
+div[data-testid="stTabs"] button[role="tab"]{
     background: transparent !important;
-    color: #f9fafb !important;
+    color: rgba(255,255,255,0.85) !important;
     border-radius: 999px !important;
     border: none !important;
-    padding: .45rem 1.3rem !important;
+    padding: 8px 16px !important;
     font-size: .9rem !important;
-    opacity: 0.85 !important;
 }
 
-/* Hover */
-div[data-testid="stTabs"] button[role="tab"]:hover {
-    background: rgba(255,255,255,0.15) !important;
+/* hover */
+div[data-testid="stTabs"] button[role="tab"]:hover{
+    background: rgba(255,255,255,0.14) !important;
     color: #ffffff !important;
-    opacity: 1 !important;
 }
 
-/* التاب المختار */
-div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {
+/* selected tab */
+div[data-testid="stTabs"] button[role="tab"][aria-selected="true"]{
     background: #ffffff !important;
     color: #8A1538 !important;
     font-weight: 700 !important;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.25) !important;
-    opacity: 1 !important;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.22) !important;
 }
-
-
 </style>
 """
+
 
 
 # =====================================================
