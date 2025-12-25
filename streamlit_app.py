@@ -954,12 +954,32 @@ def main():
                                 st.write("PREVIEW:", worksheet_body[:300])
 
                                 answer_key = normalize_pdf_text(answer_key)
+                                # --- Additional Support Mode (auto for Low) ---
+                                support_mode = (row["level"] == "Low")
+
+                                # Optional image for support mode (Reading/Writing only)
+                                img_bytes = None
+                                skill_lower = str(row["skill"]).lower()
+
+                                if support_mode and ("reading" in skill_lower or "writing" in skill_lower):
+                                    img_prompt = (
+                                        "Simple black-and-white cartoon icon, no text, kid-friendly, print-friendly. "
+                                        "Theme: school, bus, children learning."
+                                    )
+                                    try:
+                                        img_bytes = generate_support_image(client, img_prompt, size="512x512")
+                                    except Exception:
+                                        img_bytes = None
 
 
                                 ws_pdf = text_to_pdf(
                                     title=f"Worksheet for {row['student_name']}",
                                     content=worksheet_body,
+                                    font_size=16 if support_mode else 11,
+                                    line_height=20 if support_mode else 14,
+                                    image_bytes=img_bytes,
                                 )
+
                                 ak_pdf = text_to_pdf(
                                     title=f"Answer Key for {row['student_name']}",
                                     content=answer_key,
