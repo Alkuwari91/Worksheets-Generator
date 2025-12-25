@@ -968,7 +968,8 @@ def main():
                                     )
                                     try:
                                         img_bytes = generate_support_image(client, img_prompt, size="512x512")
-                                    except Exception:
+                                    except Exception as e:
+                                        st.error(f"Image generation failed: {e}")
                                         img_bytes = None
 
 
