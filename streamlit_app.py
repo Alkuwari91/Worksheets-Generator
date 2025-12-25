@@ -1,3 +1,5 @@
+import base64
+from reportlab.lib.utils import ImageReader
 import unicodedata
 import os
 import io
@@ -76,6 +78,21 @@ def normalize_pdf_text(t: str) -> str:
     return t.strip()
 
 
+
+def generate_support_image(client: OpenAI, prompt: str, size: str = "512x512") -> bytes:
+    """
+    Generate a simple, print-friendly image for additional support students.
+    Returns PNG bytes.
+    """
+    # Images API (gpt-image-1)
+    result = client.images.generate(
+        model="gpt-image-1",
+        prompt=prompt,
+        size=size,
+    )
+    # SDK returns base64 in result.data[0].b64_json
+    b64 = result.data[0].b64_json
+    return base64.b64decode(b64)
 
 
 
@@ -509,47 +526,58 @@ def clean_text_for_pdf(text: str) -> str:
     return text.strip()
 
 
-def text_to_pdf(title: str, content: str) -> bytes:
-    
-    content = normalize_pdf_text(content)   # ✅ لازم هناcontent = normalize_pdf_text(content)print("DEBUG_HAS_SQUARE:", "■" in content, content[:120])
-
-    content = re.sub(r"[\uf000-\uf0ff]", "", content)  # extra safety
-
+def text_to_pdf(title: str, content: str, font_size: int = 11, line_height: int = 14,
+                image_bytes: bytes | None = None) -> bytes:
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
-    _, height = A4
+    width, height = A4
 
     x = 40
     y = height - 60
 
+    # Title
     c.setFont("Helvetica-Bold", 14)
     c.drawString(x, y, title)
-    y -= 30
+    y -= 22
 
-    c.setFont("Helvetica", 11)
+    # Optional image (top-right)
+    if image_bytes:
+        try:
+            img = ImageReader(io.BytesIO(image_bytes))
+            img_w = 140
+            img_h = 140
+            c.drawImage(img, width - x - img_w, y - img_h + 10, img_w, img_h, mask='auto')
+            y -= (img_h - 10)
+        except Exception:
+            pass
+
+    y -= 10
+    c.setFont("Helvetica", font_size)
 
     for line in content.split("\n"):
+        # basic wrapping
         while len(line) > 110:
-            part = line[:110]
-            c.drawString(x, y, part)
+            c.drawString(x, y, line[:110])
             line = line[110:]
-            y -= 14
+            y -= line_height
             if y < 40:
                 c.showPage()
                 y = height - 60
-                c.setFont("Helvetica", 11)
+                c.setFont("Helvetica", font_size)
+
         c.drawString(x, y, line)
-        y -= 14
+        y -= line_height
         if y < 40:
             c.showPage()
             y = height - 60
-            c.setFont("Helvetica", 11)
+            c.setFont("Helvetica", font_size)
 
     c.showPage()
     c.save()
     pdf_bytes = buffer.getvalue()
     buffer.close()
     return pdf_bytes
+
 
 
 # =====================================================
