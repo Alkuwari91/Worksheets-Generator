@@ -630,48 +630,62 @@ body, .stApp {
     font-family: "JetBrains Mono", monospace;
     font-size: .85rem;
 }
-/* ====== TABS ====== */
-.stTabs {
-    background: transparent;
-    margin-top: .5rem;
-    margin-bottom: 1.2rem;
+/* ====== FORCE TABS STYLING (works across Streamlit versions) ====== */
+
+/* الخلفية البيضاء حول التابات */
+div[data-testid="stTabs"] {
+    background: transparent !important;
 }
 
-/* خلفية شريط التابات */
-.stTabs [data-baseweb="tab-list"] {
-    background: linear-gradient(135deg, #8A1538, #5e0d24);
-    padding: 0.6rem;
-    border-radius: 999px;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.18);
-    gap: .6rem;
+/* أحيانًا يكون الأبيض في الـ wrapper الداخلي */
+div[data-testid="stTabs"] > div {
+    background: transparent !important;
 }
 
-/* التابات العادية */
-.stTabs [data-baseweb="tab"] {
-    background: transparent;
-    color: #f9fafb;
-    border-radius: 999px;
-    padding: .45rem 1.3rem;
-    font-size: .9rem;
-    border: none;
-    opacity: 0.85;
+/* شريط التابات نفسه (tab list) */
+div[data-testid="stTabs"] div[role="tablist"] {
+    background: linear-gradient(135deg, #8A1538, #5e0d24) !important;
+    padding: 0.6rem !important;
+    border-radius: 999px !important;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.18) !important;
+    gap: .6rem !important;
+}
+
+/* إزالة أي خط/حد افتراضي تحت التابات */
+div[data-testid="stTabs"] div[data-baseweb="tab-border"] {
+    display: none !important;
+}
+div[data-testid="stTabs"] div[data-baseweb="tab-highlight"] {
+    background: transparent !important;
+}
+
+/* شكل التاب */
+div[data-testid="stTabs"] button[role="tab"] {
+    background: transparent !important;
+    color: #f9fafb !important;
+    border-radius: 999px !important;
+    border: none !important;
+    padding: .45rem 1.3rem !important;
+    font-size: .9rem !important;
+    opacity: 0.85 !important;
 }
 
 /* Hover */
-.stTabs [data-baseweb="tab"]:hover {
-    background: rgba(255,255,255,0.15);
-    color: #ffffff;
-    opacity: 1;
+div[data-testid="stTabs"] button[role="tab"]:hover {
+    background: rgba(255,255,255,0.15) !important;
+    color: #ffffff !important;
+    opacity: 1 !important;
 }
 
 /* التاب المختار */
-.stTabs [data-baseweb="tab"][aria-selected="true"] {
-    background: #ffffff;
+div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {
+    background: #ffffff !important;
     color: #8A1538 !important;
-    font-weight: 700;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-    opacity: 1;
+    font-weight: 700 !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25) !important;
+    opacity: 1 !important;
 }
+
 
 </style>
 """
