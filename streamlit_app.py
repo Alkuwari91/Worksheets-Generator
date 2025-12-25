@@ -80,19 +80,18 @@ def normalize_pdf_text(t: str) -> str:
 
 
 def generate_support_image(client: OpenAI, prompt: str, size: str = "512x512") -> bytes:
-    """
-    Generate a simple, print-friendly image for additional support students.
-    Returns PNG bytes.
-    """
-    # Images API (gpt-image-1)
+    import base64
+
     result = client.images.generate(
         model="gpt-image-1",
         prompt=prompt,
         size=size,
+        output_format="png",   # مهم
+        background="opaque",   # للطباعة
     )
-    # SDK returns base64 in result.data[0].b64_json
     b64 = result.data[0].b64_json
     return base64.b64decode(b64)
+
 
 
 
