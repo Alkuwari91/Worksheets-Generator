@@ -972,13 +972,23 @@ def main():
                                         img_bytes = None
 
 
-                                ws_pdf = text_to_pdf(
+                                # WRITING + LOW → handwriting support PDF
+                                if support_mode and "writing" in str(row["skill"]).lower():
+                                    ws_pdf = writing_support_pdf(
+                                    title=f"Writing Worksheet for {row['student_name']}",
+                                    prompt_text=worksheet_body,
+                                    num_lines=5,
+                                    font_size=16,
+                                )
+                                    else:
+                                    ws_pdf = text_to_pdf(
                                     title=f"Worksheet for {row['student_name']}",
                                     content=worksheet_body,
                                     font_size=16 if support_mode else 11,
                                     line_height=20 if support_mode else 14,
                                     image_bytes=img_bytes,
                                 )
+
 
                                 ak_pdf = text_to_pdf(
                                     title=f"Answer Key for {row['student_name']}",
