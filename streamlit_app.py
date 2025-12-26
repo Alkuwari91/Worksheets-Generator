@@ -981,11 +981,11 @@ def main():
                                 )
                                 else:
                                     ws_pdf = text_to_pdf(
-                                        title=f"Worksheet for {row['student_name']}",
-                                        content=worksheet_body,
-                                        font_size=16 if support_mode else 11,
-                                        line_height=20 if support_mode else 14,
-                                        image_bytes=img_bytes,
+                                    title=f"Worksheet for {row['student_name']}",
+                                    content=worksheet_body,
+                                    font_size=16 if support_mode else 11,
+                                    line_height=20 if support_mode else 14,
+                                    image_bytes=img_bytes,
                                     )
                                 ak_pdf = text_to_pdf(
                                     title=f"Answer Key for {row['student_name']}",
