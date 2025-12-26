@@ -966,7 +966,7 @@ def main():
                                         "Theme: school, bus, children learning."
                                     )
                                     try:
-                                        img_bytes = generate_support_image(client, img_prompt, size="512x512")
+                                        img_bytes = generate_support_image(client, img_prompt, size="auto")
                                     except Exception as e:
                                         st.error(f"Image generation failed: {e}")
                                         img_bytes = None
