@@ -832,7 +832,7 @@ def main():
         layout="wide",
         initial_sidebar_state="collapsed",
     )
-    st.caption("APP VERSION: 2025-12-21-01")
+    # st.caption("APP VERSION: 2025-12-21-01")
     st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
     st.markdown(
