@@ -980,7 +980,7 @@ def main():
                                     num_lines=5,
                                     font_size=16,
                                 )
-                                    else:
+                                else:
                                     ws_pdf = text_to_pdf(
                                     title=f"Worksheet for {row['student_name']}",
                                     content=worksheet_body,
