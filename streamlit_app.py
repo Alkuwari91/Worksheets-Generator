@@ -754,6 +754,46 @@ div[data-testid="stContainer"] {
 div[data-testid="stVerticalBlock"] > div:empty {
     display: none !important;
 }
+/* =========================================
+   REMOVE THE WHITE PANEL UNDER THE TOP TABS
+   (BaseWeb/Streamlit Tabs Panel)
+   ========================================= */
+
+/* Make the entire tabs area transparent */
+div[data-testid="stTabs"] {
+    background: transparent !important;
+}
+
+/* Remove the white background from the tabs content panel */
+div[data-testid="stTabs"] div[role="tabpanel"] {
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0rem !important;
+    margin: 0rem !important;
+}
+
+/* Some Streamlit versions wrap the panel in an extra BaseWeb element */
+div[data-testid="stTabs"] div[data-baseweb="tab-panel"] {
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0rem !important;
+    margin: 0rem !important;
+}
+
+/* Remove any auto white cards created inside tab panel */
+div[data-testid="stTabs"] div[data-baseweb="tab-panel"] > div {
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+}
+
+/* Optional: remove spacing right under the tab bar */
+div[data-testid="stTabs"] div[role="tablist"] + div {
+    margin-top: 0rem !important;
+    padding-top: 0rem !important;
+}
 
 </style>
 """
