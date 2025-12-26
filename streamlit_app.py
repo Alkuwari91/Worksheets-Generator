@@ -970,6 +970,7 @@ def main():
 
 
                                 # -------------------------------
+                                # -------------------------------
                                 # Generate worksheet PDF safely
                                 # -------------------------------
                                 try:
@@ -989,6 +990,37 @@ def main():
                                         f"PDF generation failed for {row['student_name']}: {e}"
                                     )
                                     ws_pdf = None
+
+                                # -------------------------------
+                                # Generate answer key PDF
+                                # -------------------------------
+                                ak_pdf = text_to_pdf(
+                                    title=f"Answer Key for {row['student_name']}",
+                                    content=answer_key,
+                                )
+
+                                # -------------------------------
+                                # Download buttons (ONLY if PDF exists)
+                                # -------------------------------
+                                if ws_pdf:
+                                    c1, c2 = st.columns(2)
+
+                                    with c1:
+                                        st.download_button(
+                                            label="Download worksheet PDF",
+                                            data=ws_pdf,
+                                            file_name=f"worksheet_{row['student_name']}.pdf",
+                                            mime="application/pdf",
+                                        )
+
+                                    with c2:
+                                        st.download_button(
+                                            label="Download answer key PDF",
+                                            data=ak_pdf,
+                                            file_name=f"answer_key_{row['student_name']}.pdf",
+                                            mime="application/pdf",
+                                        )
+
 
 
                                 ak_pdf = text_to_pdf(
