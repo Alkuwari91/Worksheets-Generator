@@ -523,14 +523,29 @@ def clean_text_for_pdf(text: str) -> str:
     return text.strip()
 
 
-def text_to_pdf(title: str, content: str, font_size: int = 11, line_height: int = 14,
-                image_bytes: bytes | None = None) -> bytes:
+def text_to_pdf(
+    title: str,
+    content: str,
+    font_size: int = 11,
+    line_height: int = 14,
+    image_bytes: bytes | None = None,
+) -> bytes:
+    import io
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.utils import ImageReader
+
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
 
-    x = 40
-    y = height - 60
+    left_margin = 40
+    right_margin = 40
+    top_margin = 60
+    bottom_margin = 40
+
+    x = left_margin
+    y = height - top_margin
 
     # Title
     c.setFont("Helvetica-Bold", 14)
@@ -543,7 +558,15 @@ def text_to_pdf(title: str, content: str, font_size: int = 11, line_height: int 
             img = ImageReader(io.BytesIO(image_bytes))
             img_w = 140
             img_h = 140
-            c.drawImage(img, width - x - img_w, y - img_h + 10, img_w, img_h, mask='auto')
+            c.drawImage(
+                img,
+                width - right_margin - img_w,
+                y - img_h + 10,
+                img_w,
+                img_h,
+                mask="auto",
+            )
+            # Move cursor down a bit below image area
             y -= (img_h - 10)
         except Exception:
             pass
@@ -551,30 +574,73 @@ def text_to_pdf(title: str, content: str, font_size: int = 11, line_height: int 
     y -= 10
     c.setFont("Helvetica", font_size)
 
-    for line in content.split("\n"):
-        # basic wrapping
-        while len(line) > 110:
-            c.drawString(x, y, line[:110])
-            line = line[110:]
+    max_width = width - left_margin - right_margin
+
+    def new_page():
+        nonlocal y
+        c.showPage()
+        y = height - top_margin
+        c.setFont("Helvetica", font_size)
+
+    def draw_wrapped_line(text: str):
+        nonlocal y
+
+        # Handle empty lines
+        if text.strip() == "":
             y -= line_height
-            if y < 40:
-                c.showPage()
-                y = height - 60
-                c.setFont("Helvetica", font_size)
+            if y < bottom_margin:
+                new_page()
+            return
 
-        c.drawString(x, y, line)
-        y -= line_height
-        if y < 40:
-            c.showPage()
-            y = height - 60
-            c.setFont("Helvetica", font_size)
+        words = text.split(" ")
+        current = ""
 
-    c.showPage()
+        for w in words:
+            # If current line is empty, try word alone
+            candidate = w if current == "" else current + " " + w
+
+            if c.stringWidth(candidate, "Helvetica", font_size) <= max_width:
+                current = candidate
+            else:
+                # Draw current line and start new one
+                if current != "":
+                    c.drawString(x, y, current)
+                    y -= line_height
+                    if y < bottom_margin:
+                        new_page()
+
+                # If single word itself is longer than max width, split it
+                if c.stringWidth(w, "Helvetica", font_size) > max_width:
+                    chunk = ""
+                    for ch in w:
+                        cand2 = chunk + ch
+                        if c.stringWidth(cand2, "Helvetica", font_size) <= max_width:
+                            chunk = cand2
+                        else:
+                            c.drawString(x, y, chunk)
+                            y -= line_height
+                            if y < bottom_margin:
+                                new_page()
+                            chunk = ch
+                    current = chunk
+                else:
+                    current = w
+
+        # Draw remaining buffer
+        if current != "":
+            c.drawString(x, y, current)
+            y -= line_height
+            if y < bottom_margin:
+                new_page()
+
+    # Process content (preserve paragraphs)
+    for raw_line in content.split("\n"):
+        draw_wrapped_line(raw_line)
+
     c.save()
     pdf_bytes = buffer.getvalue()
     buffer.close()
     return pdf_bytes
-
 
 
 # =====================================================
