@@ -988,8 +988,6 @@ def main():
                                         line_height=20 if support_mode else 14,
                                         image_bytes=img_bytes,
                                     )
-
-
                                 ak_pdf = text_to_pdf(
                                     title=f"Answer Key for {row['student_name']}",
                                     content=answer_key,
