@@ -531,113 +531,69 @@ def text_to_pdf(
     image_bytes: bytes | None = None,
 ) -> bytes:
     import io
-    from reportlab.pdfgen import canvas
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image
     from reportlab.lib.pagesizes import A4
-    from reportlab.lib.utils import ImageReader
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import cm
 
     buffer = io.BytesIO()
-    c = canvas.Canvas(buffer, pagesize=A4)
-    width, height = A4
 
-    left_margin = 40
-    right_margin = 40
-    top_margin = 60
-    bottom_margin = 40
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        leftMargin=2 * cm,
+        rightMargin=2 * cm,
+        topMargin=2 * cm,
+        bottomMargin=2 * cm,
+    )
 
-    x = left_margin
-    y = height - top_margin
+    styles = getSampleStyleSheet()
+
+    title_style = ParagraphStyle(
+        name="WS_Title",
+        parent=styles["Title"],
+        fontName="Helvetica-Bold",
+        fontSize=14,
+        spaceAfter=12,
+    )
+
+    body_style = ParagraphStyle(
+        name="WS_Body",
+        parent=styles["Normal"],
+        fontName="Helvetica",
+        fontSize=font_size,
+        leading=line_height,
+        spaceAfter=8,
+    )
+
+    elements = []
 
     # Title
-    c.setFont("Helvetica-Bold", 14)
-    c.drawString(x, y, title)
-    y -= 22
+    elements.append(Paragraph(title, title_style))
+    elements.append(Spacer(1, 10))
 
-    # Optional image (top-right)
+    # Optional image
     if image_bytes:
         try:
-            img = ImageReader(io.BytesIO(image_bytes))
-            img_w = 140
-            img_h = 140
-            c.drawImage(
-                img,
-                width - right_margin - img_w,
-                y - img_h + 10,
-                img_w,
-                img_h,
-                mask="auto",
-            )
-            # Move cursor down a bit below image area
-            y -= (img_h - 10)
+            img = Image(io.BytesIO(image_bytes))
+            img.drawWidth = 5 * cm
+            img.drawHeight = 5 * cm
+            elements.append(img)
+            elements.append(Spacer(1, 10))
         except Exception:
             pass
 
-    y -= 10
-    c.setFont("Helvetica", font_size)
+    # Content (wrap + multi-page)
+    # Preserve blank lines as spacing
+    for line in content.split("\n"):
+        if line.strip() == "":
+            elements.append(Spacer(1, line_height))
+        else:
+            safe = line.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            elements.append(Paragraph(safe, body_style))
 
-    max_width = width - left_margin - right_margin
+    doc.build(elements)
 
-    def new_page():
-        nonlocal y
-        c.showPage()
-        y = height - top_margin
-        c.setFont("Helvetica", font_size)
-
-    def draw_wrapped_line(text: str):
-        nonlocal y
-
-        # Handle empty lines
-        if text.strip() == "":
-            y -= line_height
-            if y < bottom_margin:
-                new_page()
-            return
-
-        words = text.split(" ")
-        current = ""
-
-        for w in words:
-            # If current line is empty, try word alone
-            candidate = w if current == "" else current + " " + w
-
-            if c.stringWidth(candidate, "Helvetica", font_size) <= max_width:
-                current = candidate
-            else:
-                # Draw current line and start new one
-                if current != "":
-                    c.drawString(x, y, current)
-                    y -= line_height
-                    if y < bottom_margin:
-                        new_page()
-
-                # If single word itself is longer than max width, split it
-                if c.stringWidth(w, "Helvetica", font_size) > max_width:
-                    chunk = ""
-                    for ch in w:
-                        cand2 = chunk + ch
-                        if c.stringWidth(cand2, "Helvetica", font_size) <= max_width:
-                            chunk = cand2
-                        else:
-                            c.drawString(x, y, chunk)
-                            y -= line_height
-                            if y < bottom_margin:
-                                new_page()
-                            chunk = ch
-                    current = chunk
-                else:
-                    current = w
-
-        # Draw remaining buffer
-        if current != "":
-            c.drawString(x, y, current)
-            y -= line_height
-            if y < bottom_margin:
-                new_page()
-
-    # Process content (preserve paragraphs)
-    for raw_line in content.split("\n"):
-        draw_wrapped_line(raw_line)
-
-    c.save()
     pdf_bytes = buffer.getvalue()
     buffer.close()
     return pdf_bytes
