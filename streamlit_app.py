@@ -873,13 +873,17 @@ def main():
                     st.session_state["processed_df"] = df_proc
                     st.success("Student data processed successfully ✔")
 
-                    counts = df_proc["level"].value_counts()
-                    st.markdown("**Classification summary (by level):**")
-                    st.markdown(
-                        f"- Low: {counts.get('Low', 0)}  \n"
-                        f"- Medium: {counts.get('Medium', 0)}  \n"
-                        f"- High: {counts.get('High', 0)}"
-                    )
+                                counts = df_proc["level"].value_counts()
+
+                                st.markdown("**Classification summary (by level):**")
+
+                                summary_text = (
+                                    f"- Low: {counts.get('Low', 0)}\n"
+                                    f"- Medium: {counts.get('Medium', 0)}\n"
+                                    f"- High: {counts.get('High', 0)}"
+                                )
+
+                                st.markdown(summary_text)
                     st.write("Processed data preview:")
                     st.dataframe(df_proc.sort_values(["student_id", "skill"]).head(20), use_container_width=True)
                 except Exception as e:
