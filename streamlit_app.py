@@ -80,18 +80,19 @@ def normalize_pdf_text(t: str) -> str:
 
 
 def generate_support_image(client: OpenAI, prompt: str, size: str = "512x512") -> bytes:
-    import base64
-
+    """
+    Generate a simple, print-friendly image for additional support students.
+    Returns PNG bytes.
+    """
+    # Images API (gpt-image-1)
     result = client.images.generate(
         model="gpt-image-1",
         prompt=prompt,
         size=size,
-        output_format="png",   # مهم
-        background="opaque",   # للطباعة
     )
+    # SDK returns base64 in result.data[0].b64_json
     b64 = result.data[0].b64_json
     return base64.b64decode(b64)
-
 
 
 
@@ -873,17 +874,14 @@ def main():
                     st.session_state["processed_df"] = df_proc
                     st.success("Student data processed successfully ✔")
 
-                                counts = df_proc["level"].value_counts()
+                    counts = df_proc["level"].value_counts()
+                    st.markdown("**Classification summary (by level):**")
+                    st.markdown(
+                        f"- Low: {counts.get('Low', 0)}  \n"
+                        f"- Medium: {counts.get('Medium', 0)}  \n"
+                        f"- High: {counts.get('High', 0)}"
+                    )
 
-                                st.markdown("**Classification summary (by level):**")
-
-                                summary_text = (
-                                    f"- Low: {counts.get('Low', 0)}\n"
-                                    f"- Medium: {counts.get('Medium', 0)}\n"
-                                    f"- High: {counts.get('High', 0)}"
-                                )
-
-                                st.markdown(summary_text)
                     st.write("Processed data preview:")
                     st.dataframe(df_proc.sort_values(["student_id", "skill"]).head(20), use_container_width=True)
                 except Exception as e:
@@ -969,28 +967,19 @@ def main():
                                         "Theme: school, bus, children learning."
                                     )
                                     try:
-                                        img_bytes = generate_support_image(client, img_prompt, size="auto")
-                                    except Exception as e:
-                                        st.error(f"Image generation failed: {e}")
+                                        img_bytes = generate_support_image(client, img_prompt, size="512x512")
+                                    except Exception:
                                         img_bytes = None
 
 
-                                # WRITING + LOW → handwriting support PDF
-                                if support_mode and "writing" in str(row["skill"]).lower():
-                                    ws_pdf = writing_support_pdf(
-                                    title=f"Writing Worksheet for {row['student_name']}",
-                                    prompt_text=worksheet_body,
-                                    num_lines=5,
-                                    font_size=16,
-                                )
-                                else:
-                                    ws_pdf = text_to_pdf(
+                                ws_pdf = text_to_pdf(
                                     title=f"Worksheet for {row['student_name']}",
                                     content=worksheet_body,
                                     font_size=16 if support_mode else 11,
                                     line_height=20 if support_mode else 14,
                                     image_bytes=img_bytes,
-                                    )
+                                )
+
                                 ak_pdf = text_to_pdf(
                                     title=f"Answer Key for {row['student_name']}",
                                     content=answer_key,
