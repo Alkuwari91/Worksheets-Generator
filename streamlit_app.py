@@ -969,18 +969,33 @@ def main():
                                         img_bytes = None
 
 
-                                ws_pdf = text_to_pdf(
-                                    title=f"Worksheet for {row['student_name']}",
-                                    content=worksheet_body,
-                                    font_size=16 if support_mode else 11,
-                                    line_height=20 if support_mode else 14,
-                                    image_bytes=img_bytes,
-                                )
+                                # -------------------------------
+                                # Generate worksheet PDF safely
+                                # -------------------------------
+                                try:
+                                    ws_pdf = text_to_pdf(
+                                        title=f"Worksheet for {row['student_name']}",
+                                        content=worksheet_body,
+                                        font_size=16 if support_mode else 11,
+                                        line_height=20 if support_mode else 14,
+                                        image_bytes=img_bytes,
+                                    )
+                                    st.success(
+                                        f"Worksheet PDF created ✅ ({row['student_name']}) "
+                                        f"size={len(ws_pdf)} bytes"
+                                    )
+                                except Exception as e:
+                                    st.error(
+                                        f"PDF generation failed for {row['student_name']}: {e}"
+                                    )
+                                    ws_pdf = None
+
 
                                 ak_pdf = text_to_pdf(
                                     title=f"Answer Key for {row['student_name']}",
                                     content=answer_key,
                                 )
+
 
                                 st.markdown(f"#### {row['student_name']}")
                                 c1, c2 = st.columns(2)
