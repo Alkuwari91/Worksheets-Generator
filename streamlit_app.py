@@ -879,7 +879,7 @@ def main():
                         f"- Low: {counts.get('Low', 0)}  \n"
                         f"- Medium: {counts.get('Medium', 0)}  \n"
                         f"- High: {counts.get('High', 0)}"
-                        
+                    )
                     st.write("Processed data preview:")
                     st.dataframe(df_proc.sort_values(["student_id", "skill"]).head(20), use_container_width=True)
                 except Exception as e:
