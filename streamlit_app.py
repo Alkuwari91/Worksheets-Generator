@@ -873,7 +873,6 @@ def main():
                     )
                     st.session_state["processed_df"] = df_proc
                     st.success("Student data processed successfully ✔")
-
                     counts = df_proc["level"].value_counts()
                     st.markdown("**Classification summary (by level):**")
                     st.markdown(
