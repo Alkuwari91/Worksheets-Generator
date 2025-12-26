@@ -726,6 +726,35 @@ div[data-testid="stTabs"] button[role="tab"][aria-selected="true"]{
     font-weight: 700 !important;
     box-shadow: 0 6px 16px rgba(0,0,0,0.22) !important;
 }
+/* ================================
+   REMOVE WHITE CONTAINER BOX
+   Data & RAG + Generate Worksheets
+   ================================ */
+
+/* Remove default Streamlit block background */
+div[data-testid="stVerticalBlock"] > div:has(div[data-testid="stTabs"]) {
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+}
+
+/* Remove inner white container padding */
+div[data-testid="stVerticalBlock"] {
+    background: transparent !important;
+}
+
+/* Remove any rounded white cards under tabs */
+div[data-testid="stContainer"] {
+    background: transparent !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+}
+
+/* Extra safety: remove first empty block under tabs */
+div[data-testid="stVerticalBlock"] > div:empty {
+    display: none !important;
+}
+
 </style>
 """
 
