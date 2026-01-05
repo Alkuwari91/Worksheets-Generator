@@ -1094,7 +1094,7 @@ def main():
                                 # Download buttons (ONLY if PDF exists)
                                 # -------------------------------
                                 if ws_pdf:
-                                    c1, c2 = st.columns(2)
+                                                                    c1, c2 = st.columns(2)
 
                                 with c1:
                                     st.download_button(
@@ -1113,6 +1113,7 @@ def main():
                                         mime="application/pdf",
                                         key=f"dl_ak_{row['student_id']}_{row['skill']}_{row['level']}",
                                     )
+
 
 
 
