@@ -965,8 +965,11 @@ def main():
 
         df = st.session_state.get("processed_df", None)
         curriculum_df2 = st.session_state.get("curriculum_df", None)
+        st.session_state.setdefault("generated_outputs", [])
+        st.session_state.setdefault("generated_ready", False)
 
-        if df is None:
+
+                if df is None:
             st.info("Please go to the 'Data & RAG' tab and process the student data first.")
         elif curriculum_df2 is None:
             st.error("Curriculum bank is not loaded. Please add curriculum_bank.csv.")
@@ -983,9 +986,12 @@ def main():
                 if target_df.empty:
                     st.error("No students match this skill + level.")
                 else:
+                    st.session_state["generated_outputs"] = []
+                    st.session_state["generated_ready"] = False
+
                     with st.spinner("Generating worksheets and answer keys…"):
                         try:
-                            for _, row in target_df.iterrows():
+                            for i, (_, row) in enumerate(target_df.iterrows()):
                                 grade_for_rag = int(row.get("recommended_grade", 5))
 
                                 rag_context = build_rag_context(
@@ -1006,93 +1012,87 @@ def main():
                                 )
 
                                 worksheet_body, answer_key = split_worksheet_and_answer(full_text)
-
                                 worksheet_body = normalize_pdf_text(worksheet_body)
-                                suspects = [(ch, hex(ord(ch))) for ch in worksheet_body[:500] if ord(ch) > 127]
-                                st.write("NON-ASCII SAMPLE:", suspects[:80])
-                                st.write("PREVIEW:", worksheet_body[:300])
-
                                 answer_key = normalize_pdf_text(answer_key)
+
                                 # --- Additional Support Mode (auto for Low) ---
                                 support_mode = (row["level"] == "Low")
 
-                                # Optional image for support mode (Reading/Writing only)
                                 img_bytes = None
                                 skill_lower = str(row["skill"]).lower()
-
                                 if support_mode and ("reading" in skill_lower or "writing" in skill_lower):
                                     img_prompt = (
                                         "Simple black-and-white cartoon icon, no text, kid-friendly, print-friendly. "
                                         "Theme: school, bus, children learning."
                                     )
                                     try:
-                                        img_bytes = generate_support_image(client, img_prompt, size="auto")
-                                    except Exception as e:
-                                        st.error(f"Image generation failed: {e}")
+                                        img_bytes = generate_support_image(
+                                            client,
+                                            img_prompt,
+                                            size="1024x1024",
+                                        )
+                                    except Exception:
                                         img_bytes = None
 
+                                ws_pdf = text_to_pdf(
+                                    title=f"Worksheet for {row['student_name']}",
+                                    content=worksheet_body,
+                                    font_size=16 if support_mode else 11,
+                                    line_height=20 if support_mode else 14,
+                                    image_bytes=img_bytes,
+                                )
 
-                                # -------------------------------
-                                # -------------------------------
-                                # Generate worksheet PDF safely
-                                # -------------------------------
-                                try:
-                                    ws_pdf = text_to_pdf(
-                                        title=f"Worksheet for {row['student_name']}",
-                                        content=worksheet_body,
-                                        font_size=16 if support_mode else 11,
-                                        line_height=20 if support_mode else 14,
-                                        image_bytes=img_bytes,
-                                    )
-                                    st.success(
-                                        f"Worksheet PDF created ✅ ({row['student_name']}) "
-                                        f"size={len(ws_pdf)} bytes"
-                                    )
-                                except Exception as e:
-                                    st.error(
-                                        f"PDF generation failed for {row['student_name']}: {e}"
-                                    )
-                                    ws_pdf = None
-
-                                # -------------------------------
-                                # Generate answer key PDF
-                                # -------------------------------
                                 ak_pdf = text_to_pdf(
                                     title=f"Answer Key for {row['student_name']}",
                                     content=answer_key,
                                 )
 
-                                                              ak_pdf = text_to_pdf(
-                                    title=f"Answer Key for {row['student_name']}",
-                                    content=answer_key,
+                                st.session_state["generated_outputs"].append(
+                                    {
+                                        "i": i,
+                                        "student_id": row.get("student_id", i),
+                                        "student_name": row.get("student_name", f"Student_{i}"),
+                                        "skill": row.get("skill", selected_skill),
+                                        "level": row.get("level", selected_level),
+                                        "ws_pdf": ws_pdf,
+                                        "ak_pdf": ak_pdf,
+                                    }
                                 )
 
-                                # -------------------------------
-                                # Download buttons (ONLY if PDF exists)
-                                # -------------------------------
-                                if ws_pdf:
-                                    uid = uuid.uuid4().hex
+                            st.session_state["generated_ready"] = True
+                            st.success("All PDFs generated successfully ✅")
 
-                                    st.markdown(f"#### {row['student_name']}")
-                                    c1, c2 = st.columns(2)
+                        except Exception as e:
+                            st.error(f"Error while generating worksheets: {e}")
 
-                                    with c1:
-                                        st.download_button(
-                                            label="Download worksheet PDF",
-                                            data=ws_pdf,
-                                            file_name=f"worksheet_{row['student_name']}.pdf",
-                                            mime="application/pdf",
-                                            key=f"dl_ws_{row['student_id']}_{row['skill']}_{uid}",
-                                        )
+            # -------------------------------
+            # Download buttons (render AFTER generation)
+            # -------------------------------
+            if st.session_state.get("generated_ready") and st.session_state.get("generated_outputs"):
+                st.markdown("---")
+                st.markdown("### Downloads")
 
-                                    with c2:
-                                        st.download_button(
-                                            label="Download answer key PDF",
-                                            data=ak_pdf,
-                                            file_name=f"answer_key_{row['student_name']}.pdf",
-                                            mime="application/pdf",
-                                            key=f"dl_ak_{row['student_id']}_{row['skill']}_{uid}",
-                                        )
+                for item in st.session_state["generated_outputs"]:
+                    st.markdown(f"#### {item['student_name']}")
+                    c1, c2 = st.columns(2)
+
+                    with c1:
+                        st.download_button(
+                            label=f"Download worksheet PDF — {item['student_name']}",
+                            data=item["ws_pdf"],
+                            file_name=f"worksheet_{item['student_name']}.pdf",
+                            mime="application/pdf",
+                            key=f"dl_ws_{item['student_id']}_{item['skill']}_{item['level']}_{item['i']}",
+                        )
+
+                    with c2:
+                        st.download_button(
+                            label=f"Download answer key PDF — {item['student_name']}",
+                            data=item["ak_pdf"],
+                            file_name=f"answer_key_{item['student_name']}.pdf",
+                            mime="application/pdf",
+                            key=f"dl_ak_{item['student_id']}_{item['skill']}_{item['level']}_{item['i']}",
+                        )
 
 
     with tab_help:
