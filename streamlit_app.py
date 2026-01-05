@@ -948,7 +948,7 @@ def main():
 
         st.markdown("</div>", unsafe_allow_html=True)
 
-    with tab_generate:
+        with tab_generate:
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.markdown('<div class="step-title">Step 4 — Generate worksheets (PDF)</div>', unsafe_allow_html=True)
         st.markdown(
@@ -965,11 +965,11 @@ def main():
 
         df = st.session_state.get("processed_df", None)
         curriculum_df2 = st.session_state.get("curriculum_df", None)
+
         st.session_state.setdefault("generated_outputs", [])
         st.session_state.setdefault("generated_ready", False)
 
-
-                if df is None:
+        if df is None:
             st.info("Please go to the 'Data & RAG' tab and process the student data first.")
         elif curriculum_df2 is None:
             st.error("Curriculum bank is not loaded. Please add curriculum_bank.csv.")
@@ -1093,6 +1093,9 @@ def main():
                             mime="application/pdf",
                             key=f"dl_ak_{item['student_id']}_{item['skill']}_{item['level']}_{item['i']}",
                         )
+
+        st.markdown("</div>", unsafe_allow_html=True)
+
 
 
     with tab_help:
