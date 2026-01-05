@@ -1062,69 +1062,38 @@ def main():
                                     content=answer_key,
                                 )
 
-                                # -------------------------------
-                                # Download buttons (ONLY if PDF exists)
-                                # -------------------------------
-                                if ws_pdf:
-                                                                    c1, c2 = st.columns(2)
-
-                                with c1:
-                                    st.download_button(
-                                        label="Download worksheet PDF",
-                                        data=ws_pdf,
-                                        file_name=f"worksheet_{row['student_name']}.pdf",
-                                        mime="application/pdf",
-                                        key=f"dl_ws_{row['student_id']}_{row['skill']}_{row['level']}",
-                                    )
-
-                                with c2:
-                                    st.download_button(
-                                        label="Download answer key PDF",
-                                        data=ak_pdf,
-                                        file_name=f"answer_key_{row['student_name']}.pdf",
-                                        mime="application/pdf",
-                                        key=f"dl_ak_{row['student_id']}_{row['skill']}_{row['level']}",
-                                    )
-
-
-
-
-
-                                ak_pdf = text_to_pdf(
+                                                              ak_pdf = text_to_pdf(
                                     title=f"Answer Key for {row['student_name']}",
                                     content=answer_key,
                                 )
 
+                                # -------------------------------
+                                # Download buttons (ONLY if PDF exists)
+                                # -------------------------------
+                                if ws_pdf:
+                                    uid = uuid.uuid4().hex
 
-                                                                uid = uuid.uuid4().hex
+                                    st.markdown(f"#### {row['student_name']}")
+                                    c1, c2 = st.columns(2)
 
-                                st.markdown(f"#### {row['student_name']}")
-                                c1, c2 = st.columns(2)
+                                    with c1:
+                                        st.download_button(
+                                            label="Download worksheet PDF",
+                                            data=ws_pdf,
+                                            file_name=f"worksheet_{row['student_name']}.pdf",
+                                            mime="application/pdf",
+                                            key=f"dl_ws_{row['student_id']}_{row['skill']}_{uid}",
+                                        )
 
-                                with c1:
-                                    st.download_button(
-                                        label="Download worksheet PDF",
-                                        data=ws_pdf,
-                                        file_name=f"worksheet_{row['student_name']}.pdf",
-                                        mime="application/pdf",
-                                        key=f"dl_ws_{row['student_id']}_{row['skill']}_{uid}",
-                                    )
+                                    with c2:
+                                        st.download_button(
+                                            label="Download answer key PDF",
+                                            data=ak_pdf,
+                                            file_name=f"answer_key_{row['student_name']}.pdf",
+                                            mime="application/pdf",
+                                            key=f"dl_ak_{row['student_id']}_{row['skill']}_{uid}",
+                                        )
 
-                                with c2:
-                                    st.download_button(
-                                        label="Download answer key PDF",
-                                        data=ak_pdf,
-                                        file_name=f"answer_key_{row['student_name']}.pdf",
-                                        mime="application/pdf",
-                                        key=f"dl_ak_{row['student_id']}_{row['skill']}_{uid}",
-                                    )
-
-
-                            st.success("All PDFs generated successfully ✅")
-                        except Exception as e:
-                            st.error(f"Error while generating worksheets: {e}")
-
-        st.markdown("</div>", unsafe_allow_html=True)
 
     with tab_help:
         st.markdown(
