@@ -1096,21 +1096,24 @@ def main():
                                 if ws_pdf:
                                     c1, c2 = st.columns(2)
 
-                                    with c1:
-                                        st.download_button(
-                                            label="Download worksheet PDF",
-                                            data=ws_pdf,
-                                            file_name=f"worksheet_{row['student_name']}.pdf",
-                                            mime="application/pdf",
-                                        )
+                                with c1:
+                                    st.download_button(
+                                        label="Download worksheet PDF",
+                                        data=ws_pdf,
+                                        file_name=f"worksheet_{row['student_name']}.pdf",
+                                        mime="application/pdf",
+                                        key=f"dl_ws_{row['student_id']}_{row['skill']}_{row['level']}",
+                                    )
 
-                                    with c2:
-                                        st.download_button(
-                                            label="Download answer key PDF",
-                                            data=ak_pdf,
-                                            file_name=f"answer_key_{row['student_name']}.pdf",
-                                            mime="application/pdf",
-                                        )
+                                with c2:
+                                    st.download_button(
+                                        label="Download answer key PDF",
+                                        data=ak_pdf,
+                                        file_name=f"answer_key_{row['student_name']}.pdf",
+                                        mime="application/pdf",
+                                        key=f"dl_ak_{row['student_id']}_{row['skill']}_{row['level']}",
+                                    )
+
 
 
 
