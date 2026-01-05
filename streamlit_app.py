@@ -1,3 +1,4 @@
+import uuid
 import base64
 from reportlab.lib.utils import ImageReader
 import unicodedata
@@ -16,36 +17,7 @@ from reportlab.pdfgen import canvas
 # =========================
 # PDF TEXT NORMALIZATION
 # =========================
-def normalize_pdf_text(t: str) -> str:
-    if not t:
-        return ""
 
-    # Normalize newlines
-    t = t.replace("\r\n", "\n").replace("\r", "\n")
-    t = t.replace("\u2028", "\n").replace("\u2029", "\n")
-
-    # Convert literal "\n" to real newlines
-    t = t.replace("\\n", "\n")
-
-    # Replace tabs with spaces
-    t = t.replace("\t", " ")
-
-    # ✅ Remove ASCII control characters (they show as squares in PDF viewers)
-    # Keep only newline \n
-    t = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", "", t)
-
-    # Normalize quotes/dashes
-    t = (
-        t.replace("’", "'").replace("‘", "'")
-         .replace("“", '"').replace("”", '"')
-         .replace("–", "-").replace("—", "-")
-    )
-
-    # Improve exam-style spacing
-    t = re.sub(r"\n{3,}", "\n\n", t)
-    t = re.sub(r"[ ]{2,}", " ", t)
-
-    return t.strip()
 def normalize_pdf_text(t: str) -> str:
     if not t:
         return ""
@@ -1124,22 +1096,29 @@ def main():
                                 )
 
 
+                                                                uid = uuid.uuid4().hex
+
                                 st.markdown(f"#### {row['student_name']}")
                                 c1, c2 = st.columns(2)
+
                                 with c1:
                                     st.download_button(
                                         label="Download worksheet PDF",
                                         data=ws_pdf,
                                         file_name=f"worksheet_{row['student_name']}.pdf",
                                         mime="application/pdf",
+                                        key=f"dl_ws_{row['student_id']}_{row['skill']}_{uid}",
                                     )
+
                                 with c2:
                                     st.download_button(
                                         label="Download answer key PDF",
                                         data=ak_pdf,
                                         file_name=f"answer_key_{row['student_name']}.pdf",
                                         mime="application/pdf",
+                                        key=f"dl_ak_{row['student_id']}_{row['skill']}_{uid}",
                                     )
+
 
                             st.success("All PDFs generated successfully ✅")
                         except Exception as e:
