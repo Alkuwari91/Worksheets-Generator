@@ -947,7 +947,6 @@ def main():
                     st.error(f"Error while processing data: {e}")
 
         st.markdown("</div>", unsafe_allow_html=True)
-
 with tab_data:
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown(
@@ -969,9 +968,9 @@ with tab_data:
     df = st.session_state.get("processed_df", None)
     curriculum_df2 = st.session_state.get("curriculum_df", None)
 
-
-        st.session_state.setdefault("generated_outputs", [])
-        st.session_state.setdefault("generated_ready", False)
+# ⬇️ هنا نرجع للإزاحة الطبيعية
+st.session_state.setdefault("generated_outputs", [])
+st.session_state.setdefault("generated_ready", False)
 
         if df is None:
             st.info("Please go to the 'Data & RAG' tab and process the student data first.")
