@@ -948,7 +948,7 @@ def main():
 
         st.markdown("</div>", unsafe_allow_html=True)
 
-        with tab_generate:
+        with tab_data:
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.markdown('<div class="step-title">Step 4 — Generate worksheets (PDF)</div>', unsafe_allow_html=True)
         st.markdown(
