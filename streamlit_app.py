@@ -948,29 +948,30 @@ def main():
 
         st.markdown("</div>", unsafe_allow_html=True)
         
-with tab_data:
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.markdown(
-        '<div class="step-title">Step 4 — Generate worksheets (PDF)</div>',
-        unsafe_allow_html=True
-    )
-    st.markdown(
-        """
-        <span class="tool-tag">GPT API</span>
-        <span class="tool-tag">RAG</span>
-        <span class="tool-tag">PDF export</span>
-        <p class="step-help">
-        Generates a worksheet + separate answer key for each student in the selected skill + level.
-        </p>
-        """,
-        unsafe_allow_html=True,
-    )
+    # -------- GENERATE WORKSHEETS TAB (STEP 4) --------
+    with tab_generate:
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="step-title">Step 4 — Generate worksheets (PDF)</div>',
+            unsafe_allow_html=True
+        )
+        st.markdown(
+            """
+            <span class="tool-tag">GPT API</span>
+            <span class="tool-tag">RAG</span>
+            <span class="tool-tag">PDF export</span>
+            <p class="step-help">
+            Generates a worksheet + separate answer key for each student in the selected skill + level.
+            </p>
+            """,
+            unsafe_allow_html=True,
+        )
 
-    df = st.session_state.get("processed_df", None)
-    curriculum_df2 = st.session_state.get("curriculum_df", None)
+        df = st.session_state.get("processed_df", None)
+        curriculum_df2 = st.session_state.get("curriculum_df", None)
 
-    st.session_state.setdefault("generated_outputs", [])
-    st.session_state.setdefault("generated_ready", False)
+        st.session_state.setdefault("generated_outputs", [])
+        st.session_state.setdefault("generated_ready", False)
 
         if df is None:
             st.info("Please go to the 'Data & RAG' tab and process the student data first.")
@@ -1098,7 +1099,6 @@ with tab_data:
                         )
 
         st.markdown("</div>", unsafe_allow_html=True)
-
 
 
     with tab_help:
