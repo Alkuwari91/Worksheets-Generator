@@ -1102,23 +1102,24 @@ def main():
 
     with tab_settings:
         st.markdown(
-            """
-            <div class="card">
-                <div class="step-title">Application Settings</div>
-                <p class="step-help">
-                This section allows teachers to configure system behaviour and output preferences
-                without interacting with underlying code or AI parameters.
-                </p>
+        """
+<div class="card">
+<div class="step-title">Application Settings</div>
 
-                <ul class="step-help">
-                    <li><b>API Configuration</b> – Secure handling of the language model API key.</li>
-                    <li><b>Generation Settings</b> – Control the number of questions and worksheet structure.</li>
-                    <li><b>Display Preferences</b> – Adjust formatting options such as font size and layout for accessibility.</li>
-                </ul>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+<p class="step-help">
+This section allows teachers to configure system behaviour and output preferences
+without interacting with underlying code or AI parameters.
+</p>
+
+<ul class="step-help">
+<li><b>API Configuration</b> – Secure handling of the language model API key.</li>
+<li><b>Generation Settings</b> – Control the number of questions and worksheet structure.</li>
+<li><b>Display Preferences</b> – Adjust formatting options such as font size and layout for accessibility.</li>
+</ul>
+</div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 if __name__ == "__main__":
