@@ -833,7 +833,7 @@ def main():
     curriculum_df = st.session_state["curriculum_df"]
 
     tab_overview, tab_data, tab_generate, tab_help = st.tabs(
-        ["Overview", "Data & RAG", "Generate Worksheets", "Help & Tools"]
+        ["Overview", "Data & RAG", "Generate Worksheets", "Settings"]
     )
 
     with tab_overview:
@@ -1101,22 +1101,26 @@ def main():
         st.markdown("</div>", unsafe_allow_html=True)
 
 
-    with tab_help:
-        st.markdown(
-            """
-            <div class="card">
-                <div class="step-title">Help & implementation notes</div>
-                <ul class="step-help">
-                    <li><b>Pandas</b> — reads the CSV, reshapes data, and classifies students.</li>
-                    <li><b>Rule-based classifier</b> — maps Low/Medium/High to Grades 3–6.</li>
-                    <li><b>RAG</b> — uses <code>curriculum_bank.csv</code> to align outputs with standards.</li>
-                    <li><b>GPT API</b> — generates exam-style sections per selected skill.</li>
-                    <li><b>PDF export</b> — downloadable worksheet + answer key.</li>
-                </ul>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+    with tab_settings:
+    st.markdown(
+        """
+        <div class="card">
+            <div class="step-title">Application Settings</div>
+            <p class="step-help">
+            This section allows teachers to configure system behaviour and output preferences
+            without interacting with underlying code or AI parameters.
+            </p>
+
+            <ul class="step-help">
+                <li><b>API Configuration</b> – Secure handling of the language model API key.</li>
+                <li><b>Generation Settings</b> – Control the number of questions and worksheet structure.</li>
+                <li><b>Display Preferences</b> – Adjust formatting options such as font size and layout for accessibility.</li>
+            </ul>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
 
 
 if __name__ == "__main__":
