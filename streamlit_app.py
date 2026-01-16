@@ -832,7 +832,7 @@ def main():
 
     curriculum_df = st.session_state["curriculum_df"]
 
-    tab_overview, tab_data, tab_generate, tab_help = st.tabs(
+    tab_overview, tab_data, tab_generate, tab_settings = st.tabs(
         ["Overview", "Data & RAG", "Generate Worksheets", "Settings"]
     )
 
