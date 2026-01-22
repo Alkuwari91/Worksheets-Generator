@@ -1114,7 +1114,7 @@ without interacting with underlying code or AI parameters.
 <ul class="step-help">
 <li><b>API Configuration</b> – Secure handling of the language model API key.</li>
 <li><b>Generation Settings</b> – Control the number of questions and worksheet structure.</li>
-<li><b>Display Preferences</b> – Adjust formatting options such as font size and layout for accessibility.</li>
+<li><b>Display Preferences</b> – Display Preferences – Interface-level presentation choices embedded within the workflow to improve readability and usability.</li>
 </ul>
 </div>
         """,
