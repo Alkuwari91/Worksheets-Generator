@@ -1120,7 +1120,7 @@ without interacting with underlying code or AI parameters.
         """,
         unsafe_allow_html=True,
     )
-    with tab_help:
+ with tab_help:
     st.markdown("""
     <div class="card">
         <div class="step-title">Help & User Guidance</div>
@@ -1144,7 +1144,6 @@ without interacting with underlying code or AI parameters.
         </p>
     </div>
     """, unsafe_allow_html=True)
-    )
 
 if __name__ == "__main__":
     main()
