@@ -1125,7 +1125,6 @@ with tab_help:
     st.markdown("""
 <div class="card">
     <div class="step-title">Help & User Guidance</div>
-
     <p class="step-help">
     This help module is designed to support independent and effective system use by teachers.
     It provides clear, structured guidance for each stage of the worksheet generation workflow,
@@ -1133,25 +1132,17 @@ with tab_help:
     </p>
 
     <ul class="step-help">
-        <li><b>Data preparation:</b> Guidance on preparing student performance data, including
-        mandatory columns, acceptable formats, and score ranges.</li>
-
-        <li><b>File upload:</b> Instructions for uploading student CSV files and optional curriculum
-        bank files to enable Retrieval-Augmented Generation (RAG).</li>
-
-        <li><b>Worksheet generation:</b> Step-by-step explanation of how personalised worksheets
-        are generated based on student performance levels.</li>
-
-        <li><b>Download procedures:</b> Guidance on downloading generated worksheets and answer
-        keys in PDF format.</li>
+        <li><b>Data preparation:</b> Guidance on preparing student performance data, including mandatory columns, acceptable formats, and score ranges.</li>
+        <li><b>File upload:</b> Instructions for uploading student CSV files and optional curriculum bank files to enable Retrieval-Augmented Generation (RAG).</li>
+        <li><b>Worksheet generation:</b> Step-by-step explanation of how personalised worksheets are generated based on student performance levels.</li>
+        <li><b>Download procedures:</b> Guidance on downloading generated worksheets and answer keys in PDF format.</li>
     </ul>
 
     <p class="step-help">
     <b>Troubleshooting:</b><br>
     • If worksheet generation is unavailable, ensure that the OpenAI API key is correctly configured.<br>
     • If no results appear, verify that all required CSV columns are present and correctly named.<br>
-    • If curriculum-based generation is not applied, check that the curriculum bank file has been uploaded
-    and that the index is ready.
+    • If curriculum-based generation is not applied, check that the curriculum bank file has been uploaded and that the index is ready.
     </p>
 
     <p class="step-help">
@@ -1163,7 +1154,6 @@ with tab_help:
     </p>
 </div>
 """, unsafe_allow_html=True)
-
         
 if __name__ == "__main__":
     main()
