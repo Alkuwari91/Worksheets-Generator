@@ -1122,10 +1122,9 @@ without interacting with underlying code or AI parameters.
     )
 
 with tab_help:
-    st.markdown("""
+
 st.success("Help tab loaded ✅")
 
-""", unsafe_allow_html=True)
         
 if __name__ == "__main__":
     main()
