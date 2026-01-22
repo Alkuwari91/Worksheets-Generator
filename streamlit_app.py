@@ -1120,16 +1120,38 @@ without interacting with underlying code or AI parameters.
         """,
         unsafe_allow_html=True,
     )
-with tab_help:
-    st.subheader("Help & User Guidance")
+    with tab_settings:
+        st.markdown(
+        """
+<div class="card">
+<div class="step-title">Application Settings</div>
 
-    st.write("""
+<p class="step-help">
+This section allows teachers to configure system behaviour and output preferences
+without interacting with underlying code or AI parameters.
+</p>
+
+<ul class="step-help">
+<li><b>API Configuration</b> – Secure handling of the language model API key.</li>
+<li><b>Generation Settings</b> – Control the number of questions and worksheet structure.</li>
+<li><b>Display Preferences</b> – Interface-level presentation choices embedded within the workflow to improve readability and usability.</li>
+</ul>
+</div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # ✅ لازم يكون داخل main() بنفس مستوى باقي التابات
+    with tab_help:
+        st.subheader("Help & User Guidance")
+
+        st.write("""
 This help module is designed to support independent and effective system use by teachers.
 It provides clear, structured guidance for each stage of the worksheet generation workflow,
 reducing user errors and supporting efficient classroom adoption.
 """)
 
-    st.markdown("""
+        st.markdown("""
 **Data preparation**
 - Guidance on preparing student performance data, including mandatory columns, acceptable formats, and score ranges.
 
@@ -1143,17 +1165,17 @@ reducing user errors and supporting efficient classroom adoption.
 - Guidance on downloading generated worksheets and answer keys in PDF format.
 """)
 
-    st.markdown("""
+        st.markdown("""
 **Troubleshooting**
 - If worksheet generation is unavailable, ensure that the OpenAI API key is correctly configured.
 - If no results appear, verify that all required CSV columns are present and correctly named.
 - If curriculum-based generation is not applied, check that the curriculum bank file has been uploaded and that the index is ready.
 """)
 
-    st.markdown("""
+        st.markdown("""
 **Contact**  
 For technical support or system-related enquiries:  
- **Marwa.alkuwari@gmail.com**
+**Marwa.alkuwari@gmail.com**
 """)
 
         
