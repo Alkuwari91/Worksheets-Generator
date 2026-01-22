@@ -1120,30 +1120,31 @@ without interacting with underlying code or AI parameters.
         """,
         unsafe_allow_html=True,
     )
- with tab_help:
-    st.markdown("""
-    <div class="card">
-        <div class="step-title">Help & User Guidance</div>
 
-        <p class="step-help">
-        This section supports teachers in using the system effectively.
-        It also documents system behaviour for evaluation and usability analysis.
-        </p>
+    with tab_help:
+        st.markdown("""
+        <div class="card">
+            <div class="step-title">Help & User Guidance</div>
 
-        <ul class="step-help">
-            <li><b>Step 1:</b> Upload the student performance CSV file.</li>
-            <li><b>Step 2:</b> (Optional) Upload the curriculum bank to enable RAG.</li>
-            <li><b>Step 3:</b> Process data to classify students into Low / Medium / High.</li>
-            <li><b>Step 4:</b> Generate personalised worksheets and download PDFs.</li>
-        </ul>
+            <p class="step-help">
+            This section supports teachers in using the system effectively.
+            It also documents system behaviour for evaluation and usability analysis.
+            </p>
 
-        <p class="step-help">
-        <b>Troubleshooting:</b><br>
-        • If worksheet generation is disabled, check that the API key is set.<br>
-        • If no students appear, ensure the CSV column names match the required format.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
+            <ul class="step-help">
+                <li><b>Step 1:</b> Upload the student performance CSV file.</li>
+                <li><b>Step 2:</b> (Optional) Upload the curriculum bank to enable RAG.</li>
+                <li><b>Step 3:</b> Process data to classify students into Low / Medium / High.</li>
+                <li><b>Step 4:</b> Generate personalised worksheets and download PDFs.</li>
+            </ul>
 
+            <p class="step-help">
+            <b>Troubleshooting:</b><br>
+            • If worksheet generation is disabled, check that the API key is set.<br>
+            • If no students appear, ensure the CSV column names match the required format.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        
 if __name__ == "__main__":
     main()
