@@ -1,0 +1,25 @@
+# BEFORE: No explicit API key validation
+client = OpenAI(api_key=api_key)
+
+# Worksheet generation proceeds without checking key availability
+full_text = generate_worksheet(
+    client=client,
+    student_name=row["student_name"],
+    student_grade=5,
+    curriculum_grade=grade_for_rag,
+    skill=row["skill"],
+    level=row["level"],
+    num_questions=num_q,
+    rag_context=rag_context,
+)
+# AFTER: Explicit API key validation before generation
+api_key = get_api_key()
+
+if not api_key:
+    st.error(
+        "OpenAI API key is missing. "
+        "Please configure the key in the Settings tab before generating worksheets."
+    )
+    st.stop()
+
+client = OpenAI(api_key=api_key)
