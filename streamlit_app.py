@@ -1120,11 +1120,40 @@ without interacting with underlying code or AI parameters.
         """,
         unsafe_allow_html=True,
     )
+    with tab_help:
+        st.markdown("""
+<div class="card">
+    <div class="step-title">Help & User Guidance</div>
 
-with tab_help:
+    <p class="step-help">
+    This help module is designed to support independent and effective system use by teachers.
+    It provides clear, structured guidance for each stage of the worksheet generation workflow,
+    reducing user errors and supporting efficient classroom adoption.
+    </p>
 
-st.success("Help tab loaded ✅")
+    <ul class="step-help">
+        <li><b>Data preparation:</b> Guidance on preparing student performance data, including mandatory columns, acceptable formats, and score ranges.</li>
+        <li><b>File upload:</b> Instructions for uploading student CSV files and optional curriculum bank files to enable Retrieval-Augmented Generation (RAG).</li>
+        <li><b>Worksheet generation:</b> Step-by-step explanation of how personalised worksheets are generated based on student performance levels.</li>
+        <li><b>Download procedures:</b> Guidance on downloading generated worksheets and answer keys in PDF format.</li>
+    </ul>
 
+    <p class="step-help">
+    <b>Troubleshooting:</b><br>
+    • If worksheet generation is unavailable, ensure that the OpenAI API key is correctly configured.<br>
+    • If no results appear, verify that all required CSV columns are present and correctly named.<br>
+    • If curriculum-based generation is not applied, check that the curriculum bank file has been uploaded and that the index is ready.
+    </p>
+
+    <p class="step-help">
+    <b>Contact:</b><br>
+    For technical support or system-related enquiries, please contact:<br>
+    <a href="mailto:Marwa.alkuwari@gmail.com" style="color:#8A1538; font-weight:600;">
+    Marwa.alkuwari@gmail.com
+    </a>
+    </p>
+</div>
+""", unsafe_allow_html=True)
         
 if __name__ == "__main__":
     main()
