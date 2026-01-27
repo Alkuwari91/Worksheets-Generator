@@ -47,6 +47,22 @@ This repository is provided to support transparency, verification, and reproduci
 
 Worksheets-Generator/
 │
+├── data/
+│   ├── use_case_1_sample.csv
+│   ├── use_case_2_sample.csv
+│   └── use_case_3_support_sample.csv
+│
+├── outputs/
+│   ├── use_case_1/
+│   │   ├── worksheet.pdf
+│   │   └── answer_key.pdf
+│   │
+│   ├── use_case_2/
+│   │   └── multi_page_reading.pdf
+│   │
+│   └── use_case_3/
+│       └── support_mode_worksheet.pdf
+│
 ├── streamlit_app.py
 ├── requirements.txt
 ├── curriculum_bank.csv
@@ -56,6 +72,7 @@ Worksheets-Generator/
 ├── Grade 4 Curriculum Standards.pdf
 ├── Grade 5 Curriculum Standards.pdf
 └── Grade 6 Curriculum Standards.pdf
+
 
 ```
 
