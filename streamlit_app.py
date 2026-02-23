@@ -1120,26 +1120,7 @@ without interacting with underlying code or AI parameters.
         """,
         unsafe_allow_html=True,
     )
-    with tab_settings:
-        st.markdown(
-        """
-<div class="card">
-<div class="step-title">Application Settings</div>
-
-<p class="step-help">
-This section allows teachers to configure system behaviour and output preferences
-without interacting with underlying code or AI parameters.
-</p>
-
-<ul class="step-help">
-<li><b>API Configuration</b> – Secure handling of the language model API key.</li>
-<li><b>Generation Settings</b> – Control the number of questions and worksheet structure.</li>
-<li><b>Display Preferences</b> – Interface-level presentation choices embedded within the workflow to improve readability and usability.</li>
-</ul>
-</div>
-        """,
-        unsafe_allow_html=True,
-    )
+   
 
     # ✅ لازم يكون داخل main() بنفس مستوى باقي التابات
     with tab_help:
